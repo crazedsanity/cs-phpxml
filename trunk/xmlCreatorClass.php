@@ -52,9 +52,10 @@ class xmlCreator
 	private $xmlArray;
 	private $lastTag;
 	private $rootElement;
-	private $arrayToPath;
+	private $a2pObj;
 	private $reservedWords = array('attributes', 'type', 'value');
 	private $tagTypes = array('open', 'complete');
+	private $numericPaths = array();
 	
 	//=================================================================================
 	/**
@@ -94,28 +95,33 @@ class xmlCreator
 	 */
 	public function add_tag($path, $value=NULL, array $attributes=NULL)
 	{
-		//make sure the path is correct.
-		$path = $this->verify_path($path);
-		
+		//get the final tag name, and set the path to be less that.
 		$pathArr = $this->explode_path($path);
 		$tagName = array_pop($pathArr);
-		
-		//set the path to be without the tagname.
 		$path = $this->reconstruct_path($pathArr);
+		
+		//make sure the path is correct.
+		$path = $this->verify_path($path);
 		
 		//build a tag as requested.
 		$myTag = $this->create_tag($tagName, $value, $attributes);
 		
 		//check to see if there's already data on this path.
 		$myData = $this->a2pObj->get_data($path);
-		if(!is_array($myData))
+		if(is_array($myData))
 		{
-			//make it an array.
-			$myData = array();
+			//set the type as "open".
+			$myData['type'] = 'open';
+			
+			//add the new path.
+			$myData = array_merge($myData, $myTag);
+			$this->a2pObj->set_data($path, $myData);
 		}
-		$myData = array_merge($myData, $myTag);
-		
-		$this->a2pObj->set_data($path, $myData);
+		else
+		{
+			//not an array... how can this be?
+			throw new exception("xmlCreator::add_tag(): found unclean path that passed verification ($path)");
+		}
 	}//end add_tag()
 	//=================================================================================
 	
@@ -131,7 +137,7 @@ class xmlCreator
 		if(preg_match('/attributes/', $path))
 		{
 			//dude, that is just not cool.
-			throw new exception("xmlCreator{}->add_attribute(): cannot add attributes within attributes.");
+			throw new exception("xmlCreator::add_attribute(): cannot add attributes within attributes.");
 		}
 		
 		//verify the path (creates intermediate tags as needed).
@@ -153,7 +159,7 @@ class xmlCreator
 	 * portion of the path is assumed to be the final tag name: the "type" of that
 	 * tag won't be changed, but those preceding it will.
 	 */
-	private function verify_path($path)
+	public function verify_path($path, $justCheckIt=FALSE)
 	{
 		//fix the path's case.
 		$path = $this->fix_path($path);
@@ -162,11 +168,26 @@ class xmlCreator
 		//	are setup properly.
 		$pathArr = $this->explode_path($path);
 		
-		if(count($pathArr) > 1)
+		//check to see if the path exists at all.
+		$checkData = $this->a2pObj->get_data($path);
+		if($justCheckIt)
+		{
+			if(!is_array($checkData))
+			{
+				//it's NOT an array: return NULL to let 'em know.
+				$path = NULL;
+			}
+		}
+		elseif(!is_array($checkData))
+		{
+			throw new exception("xmlBuilder::verify_path(): found invalid path at ($path)");
+		}		
+		elseif(count($pathArr) > 1)
 		{
 			$lastTag = array_pop($pathArr);
 			
 			$currentPath = "/";
+			$lastPath = $currentPath;
 			foreach($pathArr as $index=>$tagName)
 			{
 				//okay, set the current path.
@@ -175,23 +196,16 @@ class xmlCreator
 				$myData = $this->a2pObj->get_data($currentPath);
 				
 				$myType = $myData['type'];
-				if($myType !== 'open')
+				if($myType !== 'open' && !isset($this->numericPaths[$currentPath]))
 				{
-					//change the type of this tag to open, since it's got at least one tag beneath.
-					$typePath = create_list($currentPath, 'type', '/');
-					$this->a2pObj->set_data($typePath, 'open');
+					//throw an exception, so they know we got a boo-boo.	
+					throw new exception("xmlCreator::verify_path(): missing type on currentPath=($currentPath), path=($path)");
 				}
 			}
 			
 			//now, let's check to see if there's already a tag in the final path ($currentPath) with
 			//	the same name as $lastTag.
 			$finalData = $this->a2pObj->get_data($currentPath);
-			
-			if(isset($finalData[$lastTag]))
-			{
-				//TODO: somethign with setting it as multiple... or something.
-				debug_print(" ----- on $currentPath, $tagName already exists.");
-			}
 		}
 		
 		return($path);
@@ -202,23 +216,12 @@ class xmlCreator
 	
 	//=================================================================================
 	/**
-	 * Creates all tags within the given path that don't already exist.
-	 */
-	private function create_intermediate_tags($path)
-	{
-	}//end create_intermediate_tags()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
 	 * Creates an XML string based upon the current internal array structure.
 	 */
-	public function create_xml_string()
+	public function create_xml_string($addXmlVersion=FALSE)
 	{
 		$xmlBuilder = new xmlBuilder($this->a2pObj->get_data());
-		$retval = $xmlBuilder->get_xml_string();
+		$retval = $xmlBuilder->get_xml_string($addXmlVersion);
 		return($retval);
 		
 	}//end create_xml_string()
@@ -229,6 +232,9 @@ class xmlCreator
 	//=================================================================================
 	private function create_tag($tagName, $value=NULL, array $attributes=NULL, $type=NULL)
 	{
+		//upper-case the tagname.
+		$tagName = strtoupper($tagName);
+		
 		//set a default type for the tag, if none defined.
 		if(is_null($type) || !in_array($type, $this->tagTypes))
 		{
@@ -252,7 +258,7 @@ class xmlCreator
 		}
 		
 		//if they've got a value, add it to the array as well.
-		if(!is_null($value) && strlen($value) && is_string($value))
+		if(!is_null($value) && strlen($value) && (is_string($value) || is_numeric($value)))
 		{
 			//add the value.
 			$myTag[$tagName]['value'] = $value;
@@ -378,7 +384,204 @@ class xmlCreator
 		
 		//remove the "type" from that part of the array.
 		$this->a2pObj->unset_data($path ."/type");
+		
+		//add this path to our internal array of numeric paths.
+		$this->numericPaths[$path]++;
 	}//end set_tag_as_multiple()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	/**
+	 * Creates all intermediary tags for the given path.  The final tag is assumed to be
+	 * complete.
+	 */
+	public function create_path($path)
+	{
+		//set a default return value.
+		$retval = FALSE;
+		
+		if(!is_null($path) && strlen($path) > 1 && !$this->verify_path($path,TRUE))
+		{
+			//create an array to loop through.
+			$path = $this->fix_path($path);
+			$pathArr = $this->a2pObj->explode_path(strtoupper($path));
+			
+			//rip the final tag out.
+			$finalTag = array_pop($pathArr);
+			
+			if(count($pathArr) > 0)
+			{
+				//now loop it.
+				$currentPath = "/";
+				foreach($pathArr as $key=>$tagName)
+				{
+					//check data in the current path...
+					$pathOk = $this->a2pObj->get_data($currentPath);
+					
+					$tagPath = create_list($currentPath, $tagName, '/');
+					if(!strlen($pathOk[$tagName]['type']) && !isset($this->numericPaths[$tagPath]))
+					{
+						//update the current path as needed.
+						$this->add_tag($tagPath);
+					}
+					
+					//update the current path.
+					$currentPath = create_list($currentPath, $tagName, '/');
+				}
+					
+				//set the final tag...
+				$finalPath = create_list($currentPath, $finalTag, '/');
+				$this->add_tag($finalPath);
+			}
+			else
+			{
+				//Setting the root item???  Kill it!
+				throw new exception("xmlCreator::create_path(): attempted to create root element");
+			}
+		}
+		
+		return($retval);
+		
+	}//end create_path()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	/**
+	 * Like add_tag() except that $path has numeric sub-indexes, & the data to be added
+	 * can be added as the next index (kinda like setting $array[] = $dataArr).  
+	 * 
+	 * EXAMPLE: if multiple "songs" are beneath "/main/songs", call it like this:
+	 * $myArr = array
+	 * (
+	 * 		'first'	=> array
+	 * 		(
+	 * 			'title'		=> 'first title',
+	 * 			'artist'	=> 'Magic Man'
+	 * 		),
+	 * 		'second'	=> array
+	 * 		(
+	 * 			'title'		=> 'second title',
+	 * 			'artist'	=> 'Another ARtist'
+	 * 		)
+	 * );
+	 * $xml->add_tag_multiple('/main/songs', $myArr[0]);
+	 * $xml->add_tag_multiple('/main/songs', $myArr[1]);
+	 */
+	public function add_tag_multiple($path, $data, array $attributes=NULL)
+	{
+		$path = $this->fix_path($path);
+		//set a default value.
+		$retval = NULL;
+		
+		//check to see if it's already a numeric path.
+		if(isset($this->numericPaths[$path]))
+		{
+			//good to go: pull the data that already exists.
+			$myData = $this->a2pObj->get_data($path);
+			
+			//set the tagData array...
+			$tagData = array();
+			
+			//if there's attributes for the main tag, set 'em now.
+			$tagData['type'] = 'open';
+			if(!is_null($attributes))
+			{
+				//set it.
+				$tagData['attributes'] = $attributes;
+			}
+			
+			if(is_array($data))
+			{
+				//loop through $dataArr & create tags for each of the indexes.
+				foreach($data as $tagName=>$value)
+				{
+					//create the tag.
+					$myTag = $this->create_tag($tagName, $value);
+					$tagData = array_merge($tagData, $myTag);
+					
+				}
+			}
+			else
+			{
+				//it's just data, meaning it's the VALUE.
+				if(!is_null($data) && strlen($data))
+				{
+					$tagData['value'] = $data;
+				}
+				$tagData['type'] = 'complete';
+			}
+			
+			//now add the tag as a numeric index to the existing data.
+			$retval = count($myData);
+			$myData[] = $tagData;
+			
+			//now set the data into our array.
+			$this->a2pObj->set_data($path, $myData);
+		}
+		else
+		{
+			//it's not already a numeric path.  DIE.
+			debug_print($this->numericPaths);
+			throw new exception("xmlCreator::add_tag_multiple() attempted to add data to non-numeric path ($path)");
+		}
+		
+		return($retval);
+	}//end add_tag_multiple()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	/**
+	 * In some instances, it's important to be able to change the root element on-the-fly,
+	 * after the class has been instantiated.  Here's where to do it.
+	 */
+	public function rename_root_element($newName)
+	{
+		//first, change the internal "rootElement" pointer.
+		$newName = strtoupper($newName);
+		$oldRoot = $this->rootElement;
+		$this->rootElement = $newName;
+		
+		//now change our array information.
+		$myData = $this->a2pObj->get_data("/$oldRoot");
+		$this->a2pObj->unset_data("/");
+		$newData = array
+		(
+			$this->rootElement => $myData
+		);
+		$this->a2pObj->reload_data($newData);
+		
+		//update the "numericPaths" array, if there's anything in it.
+		if(is_array($this->numericPaths) && count($this->numericPaths))
+		{
+			foreach($this->numericPaths as $pathName=>$garbage)
+			{
+				//replace "/$oldRoot" with the new rootElement.
+				unset($this->numericPaths[$pathName]);
+				$pathName = preg_replace("/^\/$oldRoot/", "/". $this->rootElement, $pathName);
+				$this->numericPaths[$pathName] = $garbage;
+			}
+		}
+		
+	}//end rename_root_element()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	/**
+	 * Calls $this->a2pObj->get_data($path).  Just a wrapper for private data.
+	 */
+	public function get_data($path=NULL)
+	{
+		$retval = $this->a2pObj->get_data($path);
+		return($retval);
+	}//end get_data()
 	//=================================================================================
 }//end xmlCreator{}
 ?>

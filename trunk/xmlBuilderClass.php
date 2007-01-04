@@ -17,6 +17,7 @@ class xmlBuilder
 	private $crossedPaths = array();//list of paths that have been traversed in the array.
 	private $iteration = 0;			//current iteration/loop number
 	private $maxIterations = 2000;	//if we loop this many times, assume something went wront & die.
+	private $noDepthStringForCloseTag=NULL;	//used to tell close_tag() to not set depth string...
 	
 	//=================================================================================
 	/**
@@ -76,7 +77,6 @@ class xmlBuilder
 			$this->open_tag($this->rootElement, $rootAttributes);
 			
 			//loop through the array...
-			#$this->a2pObj->unset();
 			$this->process_sub_arrays('/'. $this->rootElement);
 			
 			//close the root element.
@@ -99,7 +99,7 @@ class xmlBuilder
 	
 	
 	//=================================================================================
-	public function get_xml_string()
+	public function get_xml_string($addXmlVersion=FALSE)
 	{
 		if($this->goAhead == TRUE)
 		{
@@ -107,7 +107,13 @@ class xmlBuilder
 			$this->process_xml_array();
 			
 			//get the parsed data...
-			$retval = $this->xmlString; 
+			$retval = $this->xmlString;
+			
+			if($addXmlVersion)
+			{
+				//Add the "<?xml version" stuff.
+				$retval = '<?xml version="1.0"?>'. "\n". $retval;
+			} 
 		}
 		else
 		{
@@ -172,11 +178,12 @@ class xmlBuilder
 	{
 		$this->depth--;
 		$depthString = "";
-		if($includeDepthString)
+		if($includeDepthString && !$this->noDepthStringForCloseTag)
 		{
 			//add depth.
 			$depthString = $this->create_depth_string();
 		}
+		$this->noDepthStringForCloseTag = NULL;
 		$this->xmlString .= $depthString . "</". strtolower($tagName) . ">";
 	}//end close_tag()
 	//=================================================================================
@@ -244,9 +251,6 @@ class xmlBuilder
 					$parentType = $subArray['type'];
 					$parentAttribs = $subArray['attributes'];
 					unset($subArray['type'], $subArray['attributes']);
-					//shouldn't happen.
-					#debug_print(" -- on path=($path), found too much data... \n". debug_print($subArray,0));
-					#throw new exception("crap");
 				}
 			}
 			
@@ -278,7 +282,7 @@ class xmlBuilder
 						unset($data['attributes']);
 					}
 					
-					$value = NULL;
+					$tagValue = NULL;
 					if(isset($data['value']))
 					{
 						$tagValue = $data['value'];
@@ -313,7 +317,7 @@ class xmlBuilder
 									{
 										//got a value...
 										$this->open_tag($subTagName, $checkData['attributes']);
-										$this->add_value_plus_close_tag($subTagName);
+										$this->add_value_plus_close_tag($checkData['value'], $subTagName);
 									}
 									else
 									{
@@ -357,7 +361,7 @@ class xmlBuilder
 					{
 						
 						//null type....
-						if(is_array($data['0']) && is_array($data['1']))
+						if(is_array($data['0']))
 						{
 							$myBasePath = create_list($path, $tagName, '/');
 							foreach($data as $numericIndex=>$numericSubData)
@@ -366,20 +370,40 @@ class xmlBuilder
 								$this->process_sub_arrays($mySubPath, $tagName);
 							}
 						}
-						elseif(is_array($subArray['0']) && is_array($subArray['1']))
+						elseif(is_array($subArray['0']))
 						{
-							$myBasePath = create_list($path, $tagName, '/');
-							
 							//special.  Don't know how, yet, but it's fscking special.
+							$myBasePath = create_list($path, $tagName, '/');
 							$pathArr = $this->a2pObj->explode_path($myBasePath);
 							array_pop($pathArr);
+							
 							$useThisTagName = array_pop($pathArr);
-							$this->process_sub_arrays($myBasePath, $useThisTagName);
+							$checkData = $this->a2pObj->get_data($myBasePath);
+							if($checkData['type'] === 'complete')
+							{
+								//process it specially.
+								if(is_null($checkData['value']) || !isset($checkData['value']))
+								{
+									//single tag...
+									$this->open_tag($useThisTagName, $checkData['attributes'], TRUE);
+								}
+								else
+								{
+									//single tag with value.
+									$this->open_tag($useThisTagName, $checkData['attributes']);
+									$this->add_value_plus_close_tag($checkData['value'], $useThisTagName);
+								}
+							}
+							else
+							{
+								//pass it down the line.
+								$this->process_sub_arrays($myBasePath, $useThisTagName);
+							}
 						}
 						else
 						{
 							//something broke.
-							throw new exception("xmlBuilder{}->process_sub_arrays(): null type=($type) on path=($path)");
+							throw new exception("xmlBuilder{}->process_sub_arrays(): non-null type=($type) on numeric path=($path)");
 						}
 					}
 				}
@@ -388,6 +412,7 @@ class xmlBuilder
 					//TODO: is this ever triggered?  Should it cause an exception?
 					//not an array.
 					$this->xmlString .= $data;
+					$this->noDepthStringForCloseTag = TRUE;
 				}
 			}
 				
