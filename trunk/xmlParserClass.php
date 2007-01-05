@@ -230,6 +230,18 @@ class XMLParser
 		return($a2p->get_data($path));
 	}//end get_path()
 	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	public function get_root_element()
+	{
+		//get EVERYTHING.
+		$myData = $this->get_path();
+		$keys = array_keys($myData);
+		return($keys[0]);
+	}//end get_root_element()
+	//=================================================================================
 }
 
 ?>
