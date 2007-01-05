@@ -9,6 +9,30 @@ xmlCreator{} is a set of methods to create an array like what xmlParser{} create
 a useable XML string.
 
 
+EXTERNAL LIBRARIES:
+-------------------
+ 1.) The "arrayToPath{}" object/class is available online at http://sf.net/projects/cs-arraytopath, or via Subversion at
+ "https://cs-arraytopath.svn.sourceforge.net/svnroot/cs-arraytopath/trunk".
+ 
+ 2.) All projects which utilize these XML libraries have a "/lib" directory (beneath "public_html", which holds index.php, 
+ etc.) that holds all the libraries: /lib/externals/ holds directories containing these libraries.  An example layout:
+ 
+ 	/public_html/
+ 		index.php
+ 		subdir1/
+ 		subdir2/
+ 	/lib/
+ 		dir1/
+ 		externals/
+ 			cs-arrayToPath/
+ 			cs-content/
+ 			cs-phpxml/
+ 		otherFolder/
+ 	/templates/
+		somedir1/
+		x/
+ 
+ 3.) 
 
 REMEMBER:
 ---------
