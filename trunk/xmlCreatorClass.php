@@ -45,7 +45,7 @@
  */
 
 require_once(dirname(__FILE__) ."/xmlBuilderClass.php");
-require_once(dirname(__FILE__) ."/../arrayToPathClass.php");
+require_once(dirname(__FILE__) ."/../cs-arrayToPath/arrayToPathClass.php");
 
 class xmlCreator
 {
