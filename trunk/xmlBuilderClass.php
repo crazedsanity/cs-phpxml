@@ -33,6 +33,9 @@ class xmlBuilder
 			
 			//create an arrayToPath{} object.
 			$this->a2pObj = new arrayToPath($xmlArray);
+			
+			//process the data.
+			$this->process_xml_array();
 		}
 	}//end __construct()
 	//=================================================================================
@@ -103,8 +106,6 @@ class xmlBuilder
 	{
 		if($this->goAhead == TRUE)
 		{
-			//process the data.
-			$this->process_xml_array();
 			
 			//get the parsed data...
 			$retval = $this->xmlString;
