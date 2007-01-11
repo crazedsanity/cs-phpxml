@@ -113,7 +113,8 @@ class xmlBuilder
 			if($addXmlVersion)
 			{
 				//Add the "<?xml version" stuff.
-				$retval = '<?xml version="1.0"?>'. "\n". $retval;
+				//TODO: shouldn't the encoding be an option... somewhere?
+				$retval = '<?xml version="1.0" encoding="UTF-8"?>'. "\n". $retval;
 			} 
 		}
 		else

@@ -261,7 +261,7 @@ class xmlCreator
 		if(!is_null($value) && strlen($value) && (is_string($value) || is_numeric($value)))
 		{
 			//add the value.
-			$myTag[$tagName]['value'] = $value;
+			$myTag[$tagName]['value'] = htmlentities(html_entity_decode($value));
 		}
 		
 		//give 'em what they want.
