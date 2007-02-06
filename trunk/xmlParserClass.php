@@ -224,7 +224,7 @@ class XMLParser
 	 * 
 	 * @param $path			(string) path in XML document to traverse...
 	 */
-	public function get_path($path)
+	public function get_path($path=NULL)
 	{
 		$a2p = new arrayToPath($this->get_tree());
 		return($a2p->get_data($path));
