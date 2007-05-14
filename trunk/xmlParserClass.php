@@ -77,12 +77,8 @@ class XMLParser
 		// try URL.
 		else
 		{
-			$fp = fopen($data_source,'r');
-			while (!feof($fp))
-			{
-				$this->data .= fread($fp, 1000);
-			}
-			fclose($fp);
+			//something went horribly wrong.
+			throw new exception("XMLParser{}: FATAL: unable to find resource");
 		}
 	}//end __construct()
 	//=================================================================================
@@ -241,6 +237,41 @@ class XMLParser
 		$keys = array_keys($myData);
 		return($keys[0]);
 	}//end get_root_element()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	public function get_value($path) {
+		$retval = NULL;
+		if(!is_null($path)) {
+			$path = preg_replace('/\/$/', '', $path);
+			$path = strtoupper($path);
+			$path = $path . '/value';
+			
+			$retval = $this->get_path($path);
+		}
+		
+		return ($retval);
+	}//end get_value()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	public function get_attribute($path, $attributeName=NULL) {
+		$retval = NULL;
+		if(!is_null($path)) {
+			$path = preg_replace('/\/$/', '', $path);
+			$path = strtoupper($path);
+			$path = $path . '/attributes/'. strtoupper($attributeName);
+			
+			$retval = $this->get_path($path);
+		}
+		
+		return($retval);
+		
+	}//end get_attribute()
 	//=================================================================================
 }
 
