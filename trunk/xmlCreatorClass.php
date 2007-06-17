@@ -142,7 +142,7 @@ class xmlCreator
 		
 		//verify the path (creates intermediate tags as needed).
 		$path = $this->verify_path($path);
-		$path = create_list($path, 'attributes', '/');
+		$path = $this->create_list($path, 'attributes', '/');
 		
 		//add the attribute.
 		$this->a2pObj->set_data($path, $attributes);
@@ -191,7 +191,7 @@ class xmlCreator
 			foreach($pathArr as $index=>$tagName)
 			{
 				//okay, set the current path.
-				$currentPath = create_list($currentPath, $tagName, '/');
+				$currentPath = $this->create_list($currentPath, $tagName, '/');
 				
 				$myData = $this->a2pObj->get_data($currentPath);
 				
@@ -340,7 +340,7 @@ class xmlCreator
 		foreach($pathArr as $index=>$tagName)
 		{
 			//add this tag to the current path.
-			$path = create_list($path, $tagName, '/');
+			$path = $this->create_list($path, $tagName, '/');
 		}
 		
 		//add the leading '/'.
@@ -420,7 +420,7 @@ class xmlCreator
 					//check data in the current path...
 					$pathOk = $this->a2pObj->get_data($currentPath);
 					
-					$tagPath = create_list($currentPath, $tagName, '/');
+					$tagPath = $this->create_list($currentPath, $tagName, '/');
 					if(!strlen($pathOk[$tagName]['type']) && !isset($this->numericPaths[$tagPath]))
 					{
 						//update the current path as needed.
@@ -428,11 +428,11 @@ class xmlCreator
 					}
 					
 					//update the current path.
-					$currentPath = create_list($currentPath, $tagName, '/');
+					$currentPath = $this->create_list($currentPath, $tagName, '/');
 				}
 					
 				//set the final tag...
-				$finalPath = create_list($currentPath, $finalTag, '/');
+				$finalPath = $this->create_list($currentPath, $finalTag, '/');
 				$this->add_tag($finalPath);
 			}
 			else
@@ -582,6 +582,19 @@ class xmlCreator
 		$retval = $this->a2pObj->get_data($path);
 		return($retval);
 	}//end get_data()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	private function create_list($string, $addThis) {
+		if($string) {
+			$retVal = $string . '/' . $addThis;
+		} else {
+			$retVal = $addThis;
+		}
+		return($retVal);
+	}//end create_list()
 	//=================================================================================
 }//end xmlCreator{}
 ?>

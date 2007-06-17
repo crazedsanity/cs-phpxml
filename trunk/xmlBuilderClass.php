@@ -5,28 +5,25 @@
  */
 
 	
-class xmlBuilder
-{
+class xmlBuilder {
 	private $goAhead = FALSE;
 	private $xmlArray = NULL;
 	private $xmlString = "";
 	private $rootElement = NULL;
 	private $a2pObj = NULL;
 	private $depth = 0;
-	private $maxDepth = 50;			//if the code gets past this depth of nested tags, assume something went wrong & die.
-	private $crossedPaths = array();//list of paths that have been traversed in the array.
-	private $iteration = 0;			//current iteration/loop number
-	private $maxIterations = 2000;	//if we loop this many times, assume something went wront & die.
-	private $noDepthStringForCloseTag=NULL;	//used to tell close_tag() to not set depth string...
+	private $maxDepth = 50; //if the code gets past this depth of nested tags, assume something went wrong & die.
+	private $crossedPaths = array (); //list of paths that have been traversed in the array.
+	private $iteration = 0; //current iteration/loop number
+	private $maxIterations = 2000; //if we loop this many times, assume something went wront & die.
+	private $noDepthStringForCloseTag=NULL; //used to tell close_tag() to not set depth string...
 	
 	//=================================================================================
 	/**
 	 * The construct.  Pass the array in here, then call get_xml_string() to see the results.
 	 */
-	public function __construct($xmlArray)
-	{
-		if(is_array($xmlArray) && count($xmlArray))
-		{
+	public function __construct($xmlArray) {
+		if(is_array($xmlArray) && count($xmlArray)) {
 			//all looks good.  Give 'em the go ahead.
 			$this->goAhead = TRUE;
 			$this->xmlArray = $xmlArray;
@@ -47,28 +44,23 @@ class xmlBuilder
 	 * Takes an array like the one that $this->get_tree() spits-out, and turns it back 
 	 * into an XML string.
 	 */
-	private function process_xml_array()
-	{
+	private function process_xml_array() {
 		//make sure we've got the "goAhead" 
-		if($this->goAhead == TRUE)
-		{
+		if($this->goAhead == TRUE) {
 			//rip-out the root element.
 			$keys = array_keys($this->xmlArray);
 			
-			if(count($keys) !== 1)
-			{
+			if(count($keys) !== 1) {
 				//there should only be ONE root element.
 				throw new exception("xmlBuilder{}->process_xml_array(): multiple root elements (or none) found!");
 			}
-			else
-			{
+			else {
 				//set the root element.
 				$this->rootElement = $keys[0];
 				
 				//pull the rootElement out of the equation.
 				$rootAttributes = $this->a2pObj->get_data("/". $this->rootElement ."/attributes");
-				if(is_array($rootAttributes))
-				{
+				if(is_array($rootAttributes)) {
 					//remove it from our internal array.
 					$this->a2pObj->unset_data("/". $this->rootElement ."/attributes");
 				}
@@ -89,8 +81,7 @@ class xmlBuilder
 			//tell 'em it's all good.
 			$retval = TRUE;
 		}
-		else
-		{
+		else {
 			//no dice, pal.
 			$retval = FALSE;
 		}
@@ -102,23 +93,19 @@ class xmlBuilder
 	
 	
 	//=================================================================================
-	public function get_xml_string($addXmlVersion=FALSE)
-	{
-		if($this->goAhead == TRUE)
-		{
+	public function get_xml_string($addXmlVersion=FALSE) {
+		if($this->goAhead == TRUE) {
 			
 			//get the parsed data...
 			$retval = $this->xmlString;
 			
-			if($addXmlVersion)
-			{
+			if($addXmlVersion) {
 				//Add the "<?xml version" stuff.
 				//TODO: shouldn't the encoding be an option... somewhere?
 				$retval = '<?xml version="1.0" encoding="UTF-8"?>'. "\n". $retval;
 			} 
 		}
-		else
-		{
+		else {
 			//FAILURE!
 			$retval = NULL;
 		}
@@ -136,23 +123,19 @@ class xmlBuilder
 	 * If $singleTag is TRUE:
 	 * 			<my_opening_tag tag1="tag1_value" tag2="tag2_value"/>
 	 */
-	private function open_tag($tagName, $attrArr=NULL, $singleTag=FALSE)
-	{
+	private function open_tag($tagName, $attrArr=NULL, $singleTag=FALSE) {
 		//set the name of the last tag opened, so it can be used later as needed.
 		$this->lastTag = $tagName;
 		
 		$retval = '<'. strtolower($tagName);
-		if(is_array($attrArr) && count($attrArr))
-		{
-			foreach($attrArr as $field=>$value)
-			{
+		if(is_array($attrArr) && count($attrArr)) {
+			foreach($attrArr as $field=>$value) {
 				$addThis = strtolower($field) . '="' . $value .'"';
-				$retval = create_list($retval, $addThis, " ");
+				$retval = $this->create_list($retval, $addThis, " ");
 			}
 		}
 		
-		if($singleTag)
-		{
+		if($singleTag) {
 			//it's a single tag, i.e.: <tag comment="i am single" />
 			$retval .= '/';
 		}
@@ -162,8 +145,7 @@ class xmlBuilder
 		$this->xmlString .= $depthString . $retval;
 	
 		//only increment the depth if there are tags beneath this one.
-		if(!$singleTag)
-		{
+		if(!$singleTag) {
 			$this->depth++;
 		}	
 		
@@ -176,12 +158,10 @@ class xmlBuilder
 	/**
 	 * Creates a closing tag & appends it to $this->xmlString.
 	 */
-	private function close_tag($tagName, $includeDepthString=TRUE)
-	{
+	private function close_tag($tagName, $includeDepthString=TRUE) {
 		$this->depth--;
 		$depthString = "";
-		if($includeDepthString && !$this->noDepthStringForCloseTag)
-		{
+		if($includeDepthString && !$this->noDepthStringForCloseTag) {
 			//add depth.
 			$depthString = $this->create_depth_string();
 		}
@@ -193,16 +173,13 @@ class xmlBuilder
 	
 	
 	//=================================================================================
-	private function create_depth_string()
-	{
+	private function create_depth_string() {
 		//
 		$retval = "";
-		if($this->depth > 0)
-		{
+		if($this->depth > 0) {
 			$retval = "\n";
 			//make some tabs, so the XML looks nice.
-			for($x=0; $x < $this->depth; $x++)
-			{
+			for($x=0; $x < $this->depth; $x++) {
 				//
 				$retval .= "\t";
 			}
@@ -221,16 +198,13 @@ class xmlBuilder
 	 * @param $path				(str) the current "path" in the array, for arrayToPath{}.
 	 * @param $parentTag	(str,optional) passed if there's multiple same-name tags at that level...
 	 */
-	private function process_sub_arrays($path='/', $parentTag=NULL)
-	{
+	private function process_sub_arrays($path='/', $parentTag=NULL) {
 		$this->iteration++;
-		if($this->iteration > $this->maxIterations)
-		{
+		if($this->iteration > $this->maxIterations) {
 			//deep recursion!
 			throw new exception("process_sub_arrays(): too many iterations (". $this->iteration .")!");
 		}
-		elseif(is_null($path) || strlen($path) == 0)
-		{
+		elseif(is_null($path) || strlen($path) == 0) {
 			//bad.
 			throw new exception("process_sub_arrays(): bad path ($path)!");
 		}
@@ -239,8 +213,7 @@ class xmlBuilder
 		$subArray = $this->a2pObj->get_data($path);
 		$origSubArray = $subArray;
 		
-		if(is_array($subArray))
-		{
+		if(is_array($subArray)) {
 			/*
 			 * NOTE: "type" is always set, except for numeric indexes: for instance, if there are
 			 * multiple "item" tags beneath "items" (/CART/ITEMS/ITEM), then /CART/ITEMS/type exists,
@@ -248,35 +221,29 @@ class xmlBuilder
 			 */
 			//set the type & attributes stuff.
 			{
-				if(isset($subArray['type']) || isset($subArray['attributes']))
-				{
+				if(isset($subArray['type']) || isset($subArray['attributes'])) {
 					$parentType = $subArray['type'];
 					$parentAttribs = $subArray['attributes'];
 					unset($subArray['type'], $subArray['attributes']);
 				}
 			}
 			
-			if(!is_null($parentTag))
-			{
+			if(!is_null($parentTag)) {
 				//open the tag.
 				$this->open_tag($parentTag, $parentAttribs);
 			}
 			
 			//loop through the array.
-			foreach($subArray as $tagName=>$data)
-			{
-				if(is_array($data))
-				{
+			foreach($subArray as $tagName=>$data) {
+				if(is_array($data)) {
 					$type = NULL;
-					if(isset($data['type']))
-					{
+					if(isset($data['type'])) {
 						$type = $data['type'];
 						unset($data['type']);
 					}
 					
 					$attrArr = NULL;
-					if(isset($data['attributes']))
-					{
+					if(isset($data['attributes'])) {
 						//pull it.
 						$attrArr = $data['attributes'];
 						
@@ -285,50 +252,41 @@ class xmlBuilder
 					}
 					
 					$tagValue = NULL;
-					if(isset($data['value']))
-					{
+					if(isset($data['value'])) {
 						$tagValue = $data['value'];
 						unset($data['value']);
 					}
 					
 					//if there's a type, deal with it.  If not, deal with that, too.
-					if(!is_null($type) && !is_numeric($tagName))
-					{
-						if($type === 'open')
-						{
+					if(!is_null($type) && !is_numeric($tagName)) {
+						if($type === 'open') {
 							//open the tag...
 							$this->open_tag($tagName, $attrArr);
 							
 							//loop through the sub-data...
-							foreach($data as $subTagName => $subData)
-							{
+							foreach($data as $subTagName => $subData) {
 								//update the path, call self, sally forth, tally ho.
-								$myPath = create_list($path, $tagName .'/'. $subTagName, '/');
+								$myPath = $this->create_list($path, $tagName .'/'. $subTagName, '/');
 								
 								//run a pre-check on that piece of the data...
 								$checkData = $this->a2pObj->get_data($myPath);
-								if(isset($checkData['type']) && $checkData['type'] === 'open')
-								{
+								if(isset($checkData['type']) && $checkData['type'] === 'open') {
 									//
 									$this->process_sub_arrays($myPath, $subTagName);
 								}
-								elseif(isset($checkData['type']) && $checkData['type'] === 'complete')
-								{
+								elseif(isset($checkData['type']) && $checkData['type'] === 'complete') {
 									//it's complete.  Just create the tag here.
-									if(isset($checkData['value']))
-									{
+									if(isset($checkData['value'])) {
 										//got a value...
 										$this->open_tag($subTagName, $checkData['attributes']);
 										$this->add_value_plus_close_tag($checkData['value'], $subTagName);
 									}
-									else
-									{
+									else {
 										//stand-alone (single) tag.
 										$this->open_tag($subTagName, $checkData['attributes'], TRUE);
 									}
 								}
-								else
-								{
+								else {
 									//nothin' doin'
 									$this->process_sub_arrays($myPath);
 								}
@@ -337,80 +295,66 @@ class xmlBuilder
 							//now close the tag.
 							$this->close_tag($tagName);
 						}
-						elseif($type === 'complete')
-						{
-						//TODO: deal with $parentTag here.
+						elseif($type === 'complete') {
+							//TODO: deal with $parentTag here.
 							//No need to go any further.
-							if(is_null($tagValue))
-							{
+							if(is_null($tagValue)) {
 								//single tag, no need to close it.
 								$this->open_tag($tagName, $attrArr, TRUE);
 							}
-							else
-							{
+							else {
 								//got a value: open, append the value, & close it.
 								$this->open_tag($tagName, $attrArr);
 								$this->add_value_plus_close_tag($tagValue, $tagName);
 							}
 						}
-						else
-						{
+						else {
 							//unknown tag name.
 							throw new exception("xmlBuilder{}->process_sub_arrays(): invalid tag type=($type)");
 						}
 					}
-					else
-					{
+					else {
 						
 						//null type....
-						if(is_array($data['0']))
-						{
-							$myBasePath = create_list($path, $tagName, '/');
-							foreach($data as $numericIndex=>$numericSubData)
-							{
-								$mySubPath = create_list($myBasePath, $numericIndex, '/');
+						if(is_array($data['0'])) {
+							$myBasePath = $this->create_list($path, $tagName, '/');
+							foreach($data as $numericIndex=>$numericSubData) {
+								$mySubPath = $this->create_list($myBasePath, $numericIndex, '/');
 								$this->process_sub_arrays($mySubPath, $tagName);
 							}
 						}
-						elseif(is_array($subArray['0']))
-						{
+						elseif(is_array($subArray['0'])) {
 							//special.  Don't know how, yet, but it's fscking special.
-							$myBasePath = create_list($path, $tagName, '/');
+							$myBasePath = $this->create_list($path, $tagName, '/');
 							$pathArr = $this->a2pObj->explode_path($myBasePath);
 							array_pop($pathArr);
 							
 							$useThisTagName = array_pop($pathArr);
 							$checkData = $this->a2pObj->get_data($myBasePath);
-							if($checkData['type'] === 'complete')
-							{
+							if($checkData['type'] === 'complete') {
 								//process it specially.
-								if(is_null($checkData['value']) || !isset($checkData['value']))
-								{
+								if(is_null($checkData['value']) || !isset($checkData['value'])) {
 									//single tag...
 									$this->open_tag($useThisTagName, $checkData['attributes'], TRUE);
 								}
-								else
-								{
+								else {
 									//single tag with value.
 									$this->open_tag($useThisTagName, $checkData['attributes']);
 									$this->add_value_plus_close_tag($checkData['value'], $useThisTagName);
 								}
 							}
-							else
-							{
+							else {
 								//pass it down the line.
 								$this->process_sub_arrays($myBasePath, $useThisTagName);
 							}
 						}
-						else
-						{
+						else {
 							//something broke.
 							throw new exception("xmlBuilder{}->process_sub_arrays(): non-null type=($type) on numeric path=($path)");
 						}
 					}
 				}
-				else
-				{
+				else {
 					//TODO: is this ever triggered?  Should it cause an exception?
 					//not an array.
 					$this->xmlString .= $data;
@@ -418,14 +362,12 @@ class xmlBuilder
 				}
 			}
 				
-			if(!is_null($parentTag))
-			{
+			if(!is_null($parentTag)) {
 				//close the tag.
 				$this->close_tag($parentTag);
 			}
 		}
-		else
-		{
+		else {
 			throw new exception("xmlBuilder{}->process_sub_arrays(): found non-array at path ($path)!");
 		}
 		
@@ -443,10 +385,8 @@ class xmlBuilder
 	 * 	one level (i.e. for "/main/cart/items/0/name/value", going back 3 levels returns
 	 * 	"items" ("name"=1, "0"=2, and so on).
 	 */
-	private function get_parent_from_path($path,$goBackLevels=1)
-	{
-		if($goBackLevels < 0)
-		{
+	private function get_parent_from_path($path, $goBackLevels=1) {
+		if($goBackLevels < 0) {
 			$goBackLevels = 1;
 		}
 		$path = preg_replace('/\/\//', '/', $path);
@@ -466,10 +406,8 @@ class xmlBuilder
 	/**
 	 * Adds a "value" to the xmlString & closes the tag.
 	 */
-	private function add_value_plus_close_tag($value, $tagName)
-	{
-		if(!strlen($value) || !strlen($tagName))
-		{
+	private function add_value_plus_close_tag($value, $tagName) {
+		if(!strlen($value) || !strlen($tagName)) {
 			//fatal error.
 			throw new exception("xmlBuilder{}->add_value_plus_close_tag(): invalid value ($value), or no tagName ($tagName)!");
 		}
@@ -478,6 +416,22 @@ class xmlBuilder
 		$this->xmlString .= $value;
 		$this->close_tag($tagName,FALSE);
 	}//end add_value_plus_close_tag()
+	//=================================================================================
+
+	//=================================================================================
+	/**
+	 * Returns a list delimited by the given delimiter.  Does the work of checking if the given variable has data
+	 * in it already, that needs to be added to, vs. setting the variable with the new content.
+	 */
+	public function create_list($string = NULL, $addThis = NULL, $delimiter = ", ") {
+		if($string) {
+			$retVal = $string . $delimiter . $addThis;
+		} else {
+			$retVal = $addThis;
+		}
+
+		return ($retVal);
+	} //end create_list()
 	//=================================================================================
 
 }
