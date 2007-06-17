@@ -596,5 +596,19 @@ class xmlCreator
 		return($retVal);
 	}//end create_list()
 	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	/**
+	 * Takes an XMLParser object & loads data from it as the internal XML array. This 
+	 * facilitates the ability to add data to existing XML.
+	 */
+	public function load_xmlparser_data(XMLParser $obj) {
+		$data = $obj->get_tree();
+		$this->xmlArray = $data;
+		$this->a2pObj = new arrayToPath($data);
+	}//end load_xmlparser_data()
+	//=================================================================================
 }//end xmlCreator{}
 ?>
