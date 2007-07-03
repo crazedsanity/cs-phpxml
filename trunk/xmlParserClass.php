@@ -14,6 +14,35 @@
  * 		http://eric.pollmann.net/work/public_domain/
  * ---------------------------------- 
  * 
+ * *********** EXAMPLE ***********
+ * 
+ * Original file contents:
+ * <test xmlns="http://your.domain.com/stuff.xml">
+ * 		<indexOne>hello</indexOne>
+ * 		<my_single_index testAttribute="hello" />
+ * 		<multiple_items>
+ * 			<item>1</item>
+ * 			<item>2</item>
+ * 		</multiple_items>
+ * </test>
+ * 
+ * Would return:
+ * 
+ * array(
+ * 	TEST => array(
+ * 		type => 'open',
+ * 		attributes => array(
+ * 			xmlns => 'http://your.domain.com/stuff.xml'
+ * 		)
+ * 		INDEXONE => 'hello',
+ * 		MY_SINGLE_INDEX = array(
+ * 			type => 'complete',
+ * 			
+ * 		)
+ * 	)
+ * );
+ *  
+ * 
  */
 
 require_once(dirname(__FILE__) .'/../cs-arrayToPath/arrayToPathClass.php');
