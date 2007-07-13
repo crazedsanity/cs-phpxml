@@ -77,6 +77,7 @@ class XMLParser
 	private $xmlIndex;
 	private $levelArr;
 	private $childTagDepth = 0;
+	private $makeSimpleTree = FALSE;
 	
 	//=================================================================================
 	/**
@@ -119,7 +120,8 @@ class XMLParser
 	 * Pase the XML file into a verbose, flat array struct.  Then, coerce that into a 
 	 * simple nested array.
 	 */
-	function get_tree() {
+	function get_tree($simpleTree=FALSE) {
+		$this->makeSimpleTree = $simpleTree;
 		$parser = xml_parser_create('ISO-8859-1');
 		xml_parser_set_option($parser, XML_OPTION_SKIP_WHITE, 1);
 		
@@ -154,7 +156,11 @@ class XMLParser
 			}
 			if(isset($thisvals['value']))
 			{
-				$tag['value'] = $thisvals['value'];
+				if($this->makeSimpleTree) {
+					$tag = $thisvals['value'];
+				} else {
+					$tag['value'] = $thisvals['value'];
+				}
 			}
 		}
 		else
@@ -166,6 +172,11 @@ class XMLParser
 				$tag['attributes'] = $thisvals['attributes'];
 			}
 			$tag = array_merge($tag, $myChildren);
+			
+			//build it as simple as possible.
+			if($this->makeSimpleTree) {
+				unset($tag['attributes'], $tag['type']);
+			}
 		}
 		
 
