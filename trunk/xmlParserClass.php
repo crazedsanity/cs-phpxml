@@ -108,7 +108,7 @@ class XMLParser
 		else
 		{
 			//something went horribly wrong.
-			throw new exception("XMLParser{}: FATAL: unable to find resource");
+			throw new exception(__METHOD__ .": FATAL: unable to find resource");
 		}
 	}//end __construct()
 	//=================================================================================

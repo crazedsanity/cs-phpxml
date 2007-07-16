@@ -52,7 +52,7 @@ class xmlBuilder {
 			
 			if(count($keys) !== 1) {
 				//there should only be ONE root element.
-				throw new exception("xmlBuilder{}->process_xml_array(): multiple root elements (or none) found!");
+				throw new exception(__METHOD__ ."(): multiple root elements (or none) found!");
 			}
 			else {
 				//set the root element.
@@ -202,11 +202,11 @@ class xmlBuilder {
 		$this->iteration++;
 		if($this->iteration > $this->maxIterations) {
 			//deep recursion!
-			throw new exception("process_sub_arrays(): too many iterations (". $this->iteration .")!");
+			throw new exception(__METHOD__ ."(): too many iterations (". $this->iteration .")!");
 		}
 		elseif(is_null($path) || strlen($path) == 0) {
 			//bad.
-			throw new exception("process_sub_arrays(): bad path ($path)!");
+			throw new exception(__METHOD__ ."(): bad path ($path)!");
 		}
 		
 		//pull the data we're going to be working with.
@@ -310,7 +310,7 @@ class xmlBuilder {
 						}
 						else {
 							//unknown tag name.
-							throw new exception("xmlBuilder{}->process_sub_arrays(): invalid tag type=($type)");
+							throw new exception(__METHOD__ ."(): invalid tag type=($type)");
 						}
 					}
 					else {
@@ -350,7 +350,7 @@ class xmlBuilder {
 						}
 						else {
 							//something broke.
-							throw new exception("xmlBuilder{}->process_sub_arrays(): non-null type=($type) on numeric path=($path)");
+							throw new exception(__METHOD__ ."(): non-null type=($type) on numeric path=($path)");
 						}
 					}
 				}
@@ -368,7 +368,7 @@ class xmlBuilder {
 			}
 		}
 		else {
-			throw new exception("xmlBuilder{}->process_sub_arrays(): found non-array at path ($path)!");
+			throw new exception(__METHOD__ ."(): found non-array at path ($path)!");
 		}
 		
 		//decrement the iteration, so things know that we're finishing-up with the current one.
@@ -409,7 +409,7 @@ class xmlBuilder {
 	private function add_value_plus_close_tag($value, $tagName) {
 		if(!strlen($value) || !strlen($tagName)) {
 			//fatal error.
-			throw new exception("xmlBuilder{}->add_value_plus_close_tag(): invalid value ($value), or no tagName ($tagName)!");
+			throw new exception(__METHOD__ ."(): invalid value ($value), or no tagName ($tagName)!");
 		}
 		
 		//append the value, then close the tag.

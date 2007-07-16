@@ -120,7 +120,7 @@ class xmlCreator
 		else
 		{
 			//not an array... how can this be?
-			throw new exception("xmlCreator::add_tag(): found unclean path that passed verification ($path)");
+			throw new exception(__METHOD__ ."(): found unclean path that passed verification ($path)");
 		}
 	}//end add_tag()
 	//=================================================================================
@@ -137,7 +137,7 @@ class xmlCreator
 		if(preg_match('/attributes/', $path))
 		{
 			//dude, that is just not cool.
-			throw new exception("xmlCreator::add_attribute(): cannot add attributes within attributes.");
+			throw new exception(__METHOD__ ."(): cannot add attributes within attributes.");
 		}
 		
 		//verify the path (creates intermediate tags as needed).
@@ -180,7 +180,7 @@ class xmlCreator
 		}
 		elseif(!is_array($checkData))
 		{
-			throw new exception("xmlBuilder::verify_path(): found invalid path at ($path)");
+			throw new exception(__METHOD__ ."(): found invalid path at ($path)");
 		}		
 		elseif(count($pathArr) > 1)
 		{
@@ -199,7 +199,7 @@ class xmlCreator
 				if($myType !== 'open' && !isset($this->numericPaths[$currentPath]))
 				{
 					//throw an exception, so they know we got a boo-boo.	
-					throw new exception("xmlCreator::verify_path(): missing type on currentPath=($currentPath), path=($path)");
+					throw new exception(__METHOD__ ."(): missing type on currentPath=($currentPath), path=($path)");
 				}
 			}
 			
@@ -438,7 +438,7 @@ class xmlCreator
 			else
 			{
 				//Setting the root item???  Kill it!
-				throw new exception("xmlCreator::create_path(): attempted to create root element");
+				throw new exception(__METHOD__ ."(): attempted to create root element");
 			}
 		}
 		
@@ -526,7 +526,7 @@ class xmlCreator
 		{
 			//it's not already a numeric path.  DIE.
 			debug_print($this->numericPaths);
-			throw new exception("xmlCreator::add_tag_multiple() attempted to add data to non-numeric path ($path)");
+			throw new exception(__METHOD__ ."() attempted to add data to non-numeric path ($path)");
 		}
 		
 		return($retval);
@@ -608,6 +608,15 @@ class xmlCreator
 		$data = $obj->get_tree();
 		$this->xmlArray = $data;
 		$this->a2pObj = new arrayToPath($data);
+		
+		$x = array_keys($this->a2pObj->get_data(NULL));
+		
+		if(count($x) > 1) {
+			throw new exception(__METHOD__ .": too many root elements");
+		}
+		else {
+			$this->rootElement = $x[0];
+		}
 	}//end load_xmlparser_data()
 	//=================================================================================
 }//end xmlCreator{}
