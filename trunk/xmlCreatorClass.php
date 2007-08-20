@@ -258,10 +258,11 @@ class xmlCreator
 		}
 		
 		//if they've got a value, add it to the array as well.
-		if(!is_null($value) && strlen($value) && (is_string($value) || is_numeric($value)))
-		{
-			//add the value.
-			$myTag[$tagName]['value'] = htmlentities(html_entity_decode($value));
+		if(!is_null($value) && (is_string($value) || is_numeric($value))) {
+			if (strlen($value)) {
+				//add the value then, it's got a length! - note this will convert numeric values above into strings for checking?
+				$myTag[$tagName]['value'] = htmlentities(html_entity_decode($value));
+			}
 		}
 		
 		//give 'em what they want.
