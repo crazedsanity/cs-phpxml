@@ -48,8 +48,7 @@
 require_once(dirname(__FILE__) .'/../cs-arrayToPath/arrayToPathClass.php');
 
 
-class XMLParser
-{
+class XMLParser {
 
 /*
  * Based on code found online at:
@@ -87,26 +86,21 @@ class XMLParser
 		$this->collapse_dups = $collapse_dups;
 		$this->index_numeric = $index_numeric;
 		$this->data = '';
-		if($data_source_type == 'raw')
-		{
+		if($data_source_type == 'raw') {
 			$this->data = $data_source;
 		}
-		elseif ($data_source_type == 'stream')
-		{
-			while (!feof($data_source))
-			{
+		elseif ($data_source_type == 'stream') {
+			while (!feof($data_source)) {
 				$this->data .= fread($data_source, 1000);
 			}
 		}
 		// try filename, then if that fails...
-		elseif (file_exists($data_source))
-		{
+		elseif (file_exists($data_source)) {
 			$this->data = implode('', file($data_source)); 
 
 		}
 		// try URL.
-		else
-		{
+		else {
 			//something went horribly wrong.
 			throw new exception(__METHOD__ .": FATAL: unable to find resource");
 		}
@@ -147,15 +141,12 @@ class XMLParser
 		$tag = array();
 		$tag['type'] = $type;
 
-		if($type === 'complete')
-		{
+		if($type === 'complete') {
 			// complete tag, just return it for storage in array.
-			if(isset($thisvals['attributes']))
-			{
+			if(isset($thisvals['attributes'])) {
 				$tag['attributes'] = $thisvals['attributes'];
 			}
-			if(isset($thisvals['value']))
-			{
+			if(isset($thisvals['value'])) {
 				if($this->makeSimpleTree) {
 					$tag = $thisvals['value'];
 				} else {
@@ -163,12 +154,10 @@ class XMLParser
 				}
 			}
 		}
-		else
-		{
+		else {
 			// open tag, recurse
 			$myChildren = $this->get_children($vals, $i);
-			if(isset($thisvals['attributes']))
-			{
+			if(isset($thisvals['attributes'])) {
 				$tag['attributes'] = $thisvals['attributes'];
 			}
 			$tag = array_merge($tag, $myChildren);
@@ -193,15 +182,13 @@ class XMLParser
 	private function get_children($vals, &$i) {
 		$children = array();     // Contains node data
 		
-		if ($i > -1 && isset($vals[$i]['value']))
-		{
+		if ($i > -1 && isset($vals[$i]['value'])) {
 			//Node has CDATA before it's children.
 			$children['VALUE'] = $vals[$i]['value'];
 		}
 
 		// Loop through children, until hit close tag or run out of tags
-		while (++$i < count($vals))
-		{
+		while (++$i < count($vals)) {
 			$type = $vals[$i]['type'];
 			
 			/* TODO: find something that causes this instance to fire-off, so I can tell WTF it should do.
@@ -213,35 +200,28 @@ class XMLParser
 				$children['VALUE'] .= $vals[$i]['value'];
 			}
 			else#*/
-			if($type === 'complete' || $type === 'open')
-			{
+			if($type === 'complete' || $type === 'open') {
 				// 'complete':	At end of current branch
 				// 'open':	Node has children, recurse
 				$tag = $this->build_tag($vals[$i], $vals, $i, $type);
-				if ($this->index_numeric)
-				{
+				if ($this->index_numeric) {
 					$tag['TAG'] = $vals[$i]['tag'];
 					$children[] = $tag;
 				}
-				else
-				{
+				else {
 					$children[$vals[$i]['tag']][] = $tag;
 				}
 			}
-			elseif ($type === 'close')
-			{
+			elseif ($type === 'close') {
 				// 'close:	End of node, return collected data
 				//		Do not increment $i or nodes disappear!
 				break;
 			}
 		} 
 		
-		if ($this->collapse_dups)
-		{
-			foreach($children as $key => $value)
-			{
-				if (is_array($value) && (count($value) == 1))
-				{
+		if ($this->collapse_dups) {
+			foreach($children as $key => $value) {
+				if (is_array($value) && (count($value) == 1)) {
 					$children[$key] = $value[0];
 				}
 			}
@@ -260,8 +240,7 @@ class XMLParser
 	 * 
 	 * @param $path			(string) path in XML document to traverse...
 	 */
-	public function get_path($path=NULL)
-	{
+	public function get_path($path=NULL) {
 		$a2p = new arrayToPath($this->get_tree());
 		return($a2p->get_data($path));
 	}//end get_path()
@@ -270,8 +249,7 @@ class XMLParser
 	
 	
 	//=================================================================================
-	public function get_root_element()
-	{
+	public function get_root_element() {
 		//get EVERYTHING.
 		$myData = $this->get_path();
 		$keys = array_keys($myData);
