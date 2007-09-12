@@ -15,6 +15,8 @@
 
 abstract class cs_xmlAbstract {
 	
+	public $isTest = FALSE;
+	
 	abstract public function __construct();
 	
 	//=========================================================================

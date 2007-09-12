@@ -92,27 +92,33 @@ class XMLParser extends cs_xmlAbstract {
 	 * CONSTRUCTOR: Read in XML on object creation, via raw data (string), stream, filename, or URL.
 	 */
 	function __construct($data_source, $data_source_type='raw', $collapse_dups=1, $index_numeric=0) {
-		$this->get_version();
-		$this->collapse_dups = $collapse_dups;
-		$this->index_numeric = $index_numeric;
-		$this->data = '';
-		if($data_source_type == 'raw') {
-			$this->data = $data_source;
+		if($data_source === 'unit_test') {
+			//this is only a test... don't do anything.
+			$this->isTest = TRUE;
 		}
-		elseif ($data_source_type == 'stream') {
-			while (!feof($data_source)) {
-				$this->data .= fread($data_source, 1000);
-			}
-		}
-		// try filename, then if that fails...
-		elseif (file_exists($data_source)) {
-			$this->data = implode('', file($data_source)); 
-
-		}
-		// try URL.
 		else {
-			//something went horribly wrong.
-			throw new exception(__METHOD__ .": FATAL: unable to find resource");
+			$this->get_version();
+			$this->collapse_dups = $collapse_dups;
+			$this->index_numeric = $index_numeric;
+			$this->data = '';
+			if($data_source_type == 'raw') {
+				$this->data = $data_source;
+			}
+			elseif ($data_source_type == 'stream') {
+				while (!feof($data_source)) {
+					$this->data .= fread($data_source, 1000);
+				}
+			}
+			// try filename, then if that fails...
+			elseif (file_exists($data_source)) {
+				$this->data = implode('', file($data_source)); 
+	
+			}
+			// try URL.
+			else {
+				//something went horribly wrong.
+				throw new exception(__METHOD__ .": FATAL: unable to find resource");
+			}
 		}
 	}//end __construct()
 	//=================================================================================
