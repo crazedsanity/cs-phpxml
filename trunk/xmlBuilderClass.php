@@ -2,10 +2,18 @@
 /*
  * Created on Dec 1, 2006
  * 
+ * SVN INFORMATION:::
+ * -------------------
+ * Last Author::::::::: $Author$ 
+ * Current Revision:::: $Revision$ 
+ * Repository Location: $HeadURL$ 
+ * Last Updated:::::::: $Date$
+ * 
  */
+require_once(dirname(__FILE__) ."/xmlAbstract.class.php");
 
 	
-class xmlBuilder {
+class xmlBuilder extends cs_xmlAbstract {
 	private $goAhead = FALSE;
 	private $xmlArray = NULL;
 	private $xmlString = "";
@@ -23,6 +31,7 @@ class xmlBuilder {
 	 * The construct.  Pass the array in here, then call get_xml_string() to see the results.
 	 */
 	public function __construct($xmlArray) {
+		$this->get_version();
 		if(is_array($xmlArray) && count($xmlArray)) {
 			//all looks good.  Give 'em the go ahead.
 			$this->goAhead = TRUE;
@@ -416,22 +425,6 @@ class xmlBuilder {
 		$this->xmlString .= $value;
 		$this->close_tag($tagName,FALSE);
 	}//end add_value_plus_close_tag()
-	//=================================================================================
-
-	//=================================================================================
-	/**
-	 * Returns a list delimited by the given delimiter.  Does the work of checking if the given variable has data
-	 * in it already, that needs to be added to, vs. setting the variable with the new content.
-	 */
-	public function create_list($string = NULL, $addThis = NULL, $delimiter = ", ") {
-		if($string) {
-			$retVal = $string . $delimiter . $addThis;
-		} else {
-			$retVal = $addThis;
-		}
-
-		return ($retVal);
-	} //end create_list()
 	//=================================================================================
 
 }

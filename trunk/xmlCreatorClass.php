@@ -2,6 +2,15 @@
 /*
  * Created on Dec 18, 2006
  * 
+ * 
+ * SVN INFORMATION:::
+ * -------------------
+ * Last Author::::::::: $Author$ 
+ * Current Revision:::: $Revision$ 
+ * Repository Location: $HeadURL$ 
+ * Last Updated:::::::: $Date$
+ * 
+ * 
  * Methods to create XML that's parseable by xmlBuilder{}.  Eliminates the need for manually creating
  * a massive array, just to feed it into xmlBuilder: it's assumed that the XML is being built in-line,
  * though there are methods for "going back" and modifying specific items within a specific tag (tags 
@@ -45,10 +54,10 @@
  */
 
 require_once(dirname(__FILE__) ."/xmlBuilderClass.php");
+require_once(dirname(__FILE__) ."/xmlAbstract.class.php");
 require_once(dirname(__FILE__) ."/../cs-arrayToPath/arrayToPathClass.php");
 
-class xmlCreator
-{
+class xmlCreator extends cs_xmlAbstract {
 	private $xmlArray;
 	private $lastTag;
 	private $rootElement;
@@ -62,6 +71,7 @@ class xmlCreator
 	 * The constructor.
 	 */
 	public function __construct($rootElement="main", array $xmlns=NULL) {
+		$this->get_version();
 		//check to ensure there's a real element.
 		if(!strlen($rootElement)) {
 			//Give it a default root element.
@@ -536,20 +546,6 @@ class xmlCreator
 		return($retval);
 	}//end get_data()
 	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	private function create_list($string, $addThis) {
-		if($string) {
-			$retVal = $string . '/' . $addThis;
-		} else {
-			$retVal = $addThis;
-		}
-		return($retVal);
-	}//end create_list()
-	//=================================================================================
-	
 	
 	
 	//=================================================================================

@@ -2,6 +2,14 @@
 /*
  * Created on Nov 14, 2006
  * 
+ * SVN INFORMATION:::
+ * -------------------
+ * Last Author::::::::: $Author$ 
+ * Current Revision:::: $Revision$ 
+ * Repository Location: $HeadURL$ 
+ * Last Updated:::::::: $Date$
+ * 
+ * 
  * Built for PHP to programatically parse & understand data within an XML document.
  * 
  * 
@@ -46,9 +54,10 @@
  */
 
 require_once(dirname(__FILE__) .'/../cs-arrayToPath/arrayToPathClass.php');
+require_once(dirname(__FILE__) ."/xmlAbstract.class.php");
 
 
-class XMLParser {
+class XMLParser extends cs_xmlAbstract {
 
 /*
  * Based on code found online at:
@@ -83,6 +92,7 @@ class XMLParser {
 	 * CONSTRUCTOR: Read in XML on object creation, via raw data (string), stream, filename, or URL.
 	 */
 	function __construct($data_source, $data_source_type='raw', $collapse_dups=1, $index_numeric=0) {
+		$this->get_version();
 		$this->collapse_dups = $collapse_dups;
 		$this->index_numeric = $index_numeric;
 		$this->data = '';
