@@ -159,13 +159,14 @@ class XMLParser extends cs_xmlAbstract {
 
 		if($type === 'complete') {
 			// complete tag, just return it for storage in array.
-			if(isset($thisvals['attributes'])) {
-				$tag['attributes'] = $thisvals['attributes'];
+			if($this->makeSimpleTree) {
+				$tag = $thisvals['value'];
 			}
-			if(isset($thisvals['value'])) {
-				if($this->makeSimpleTree) {
-					$tag = $thisvals['value'];
-				} else {
+			else {
+				if(isset($thisvals['attributes'])) {
+					$tag['attributes'] = $thisvals['attributes'];
+				}
+				if(isset($thisvals['value'])) {
 					$tag['value'] = $thisvals['value'];
 				}
 			}
