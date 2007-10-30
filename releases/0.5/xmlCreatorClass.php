@@ -568,5 +568,18 @@ class xmlCreator extends cs_xmlAbstract {
 		}
 	}//end load_xmlparser_data()
 	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	public function remove_path($path) {
+		if(!is_null($path)) {
+			$this->a2pObj->unset_data($path);
+		}
+		else {
+			throw new exception(__METHOD__ .": invalid path given (". $path .")");
+		}
+	}//end remove_path();
+	//=================================================================================
 }//end xmlCreator{}
 ?>
