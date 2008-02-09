@@ -139,7 +139,7 @@ class xmlBuilder extends cs_xmlAbstract {
 		$retval = '<'. strtolower($tagName);
 		if(is_array($attrArr) && count($attrArr)) {
 			foreach($attrArr as $field=>$value) {
-				$addThis = strtolower($field) . '="' . $value .'"';
+				$addThis = strtolower($field) . '="' . htmlentities($value) .'"';
 				$retval = $this->create_list($retval, $addThis, " ");
 			}
 		}
@@ -422,7 +422,7 @@ class xmlBuilder extends cs_xmlAbstract {
 		}
 		
 		//append the value, then close the tag.
-		$this->xmlString .= $value;
+		$this->xmlString .= htmlentities($value);
 		$this->close_tag($tagName,FALSE);
 	}//end add_value_plus_close_tag()
 	//=================================================================================
