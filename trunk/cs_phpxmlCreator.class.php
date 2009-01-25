@@ -53,11 +53,9 @@
  * (forthcoming)
  */
 
-require_once(dirname(__FILE__) ."/xmlBuilderClass.php");
-require_once(dirname(__FILE__) ."/xmlAbstract.class.php");
-require_once(dirname(__FILE__) ."/../cs-arrayToPath/arrayToPathClass.php");
+require_once(dirname(__FILE__) ."/cs_phpxml.abstract.class.php");
 
-class xmlCreator extends cs_xmlAbstract {
+class cs_phpxmlCreator extends cs_xmlAbstract {
 	private $xmlArray;
 	private $lastTag;
 	private $rootElement;

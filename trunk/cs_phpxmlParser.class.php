@@ -53,11 +53,10 @@
  * 
  */
 
-require_once(dirname(__FILE__) .'/../cs-arrayToPath/arrayToPathClass.php');
-require_once(dirname(__FILE__) ."/xmlAbstract.class.php");
+require_once(dirname(__FILE__) ."/cs_phpxml.abstract.class.php");
 
 
-class XMLParser extends cs_xmlAbstract {
+class cs_phpxmlParser extends cs_phpxmlAbstract {
 
 /*
  * Based on code found online at:

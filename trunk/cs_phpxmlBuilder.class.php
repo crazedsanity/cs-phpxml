@@ -10,10 +10,10 @@
  * Last Updated:::::::: $Date$
  * 
  */
-require_once(dirname(__FILE__) ."/xmlAbstract.class.php");
+require_once(dirname(__FILE__) ."/cs_phpxmlAbstract.class.php");
 
 	
-class xmlBuilder extends cs_xmlAbstract {
+class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	private $goAhead = FALSE;
 	private $xmlArray = NULL;
 	private $xmlString = "";

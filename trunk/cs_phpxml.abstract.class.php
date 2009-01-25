@@ -12,8 +12,9 @@
  * 
  */
 
+require_once(dirname(__FILE__) .'/../cs-arrayToPath/arrayToPathClass.php');
 
-abstract class cs_xmlAbstract {
+abstract class cs_phpxmlAbstract {
 	
 	public $isTest = FALSE;
 	
