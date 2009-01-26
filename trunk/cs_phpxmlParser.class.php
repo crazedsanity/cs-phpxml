@@ -79,7 +79,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 						//   shall we store as scalar or array?
 	var $index_numeric;	// Index tags by numeric position, not name.
 						//   useful for ordered XML like CallXML.
-	private $a2p;
 	private $xmlTags;
 	private $xmlIndex;
 	private $levelArr;
@@ -91,6 +90,7 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	 * CONSTRUCTOR: Read in XML on object creation, via raw data (string), stream, filename, or URL.
 	 */
 	function __construct($data_source, $data_source_type='raw', $collapse_dups=1, $index_numeric=0) {
+		parent::__construct(array());
 		if($data_source === 'unit_test') {
 			//this is only a test... don't do anything.
 			$this->isTest = TRUE;
@@ -257,8 +257,8 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	 * @param $path			(string) path in XML document to traverse...
 	 */
 	public function get_path($path=NULL) {
-		$a2p = new arrayToPath($this->get_tree());
-		return($a2p->get_data($path));
+		$this->a2p->reload_data($this->get_tree());
+		return($this->a2p->get_data($path));
 	}//end get_path()
 	//=================================================================================
 	

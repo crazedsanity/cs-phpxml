@@ -10,7 +10,7 @@
  * Last Updated:::::::: $Date$
  * 
  */
-require_once(dirname(__FILE__) ."/cs_phpxmlAbstract.class.php");
+require_once(dirname(__FILE__) ."/cs_phpxml.abstract.class.php");
 
 	
 class cs_phpxmlBuilder extends cs_phpxmlAbstract {
@@ -18,7 +18,6 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	private $xmlArray = NULL;
 	private $xmlString = "";
 	private $rootElement = NULL;
-	private $a2pObj = NULL;
 	private $depth = 0;
 	private $maxDepth = 50; //if the code gets past this depth of nested tags, assume something went wrong & die.
 	private $crossedPaths = array (); //list of paths that have been traversed in the array.
@@ -38,7 +37,7 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 			$this->xmlArray = $xmlArray;
 			
 			//create an arrayToPath{} object.
-			$this->a2pObj = new arrayToPath($xmlArray);
+			parent::__construct($xmlArray);
 			
 			//process the data.
 			$this->process_xml_array();
@@ -68,13 +67,13 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 				$this->rootElement = $keys[0];
 				
 				//pull the rootElement out of the equation.
-				$rootAttributes = $this->a2pObj->get_data("/". $this->rootElement ."/attributes");
+				$rootAttributes = $this->a2p->get_data("/". $this->rootElement ."/attributes");
 				if(is_array($rootAttributes)) {
 					//remove it from our internal array.
-					$this->a2pObj->unset_data("/". $this->rootElement ."/attributes");
+					$this->a2p->unset_data("/". $this->rootElement ."/attributes");
 				}
 				//now remove the "type" index.
-				$this->a2pObj->unset_data("/". $this->rootElement ."/type");
+				$this->a2p->unset_data("/". $this->rootElement ."/type");
 			}
 			
 			//open a tag for the root element.
@@ -219,7 +218,7 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 		}
 		
 		//pull the data we're going to be working with.
-		$subArray = $this->a2pObj->get_data($path);
+		$subArray = $this->a2p->get_data($path);
 		$origSubArray = $subArray;
 		
 		if(is_array($subArray)) {
@@ -278,7 +277,7 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 								$myPath = $this->create_list($path, $tagName .'/'. $subTagName, '/');
 								
 								//run a pre-check on that piece of the data...
-								$checkData = $this->a2pObj->get_data($myPath);
+								$checkData = $this->a2p->get_data($myPath);
 								if(isset($checkData['type']) && $checkData['type'] === 'open') {
 									//
 									$this->process_sub_arrays($myPath, $subTagName);
@@ -335,11 +334,11 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 						elseif(is_array($subArray['0'])) {
 							//special.  Don't know how, yet, but it's fscking special.
 							$myBasePath = $this->create_list($path, $tagName, '/');
-							$pathArr = $this->a2pObj->explode_path($myBasePath);
+							$pathArr = $this->a2p->explode_path($myBasePath);
 							array_pop($pathArr);
 							
 							$useThisTagName = array_pop($pathArr);
-							$checkData = $this->a2pObj->get_data($myBasePath);
+							$checkData = $this->a2p->get_data($myBasePath);
 							if($checkData['type'] === 'complete') {
 								//process it specially.
 								if(is_null($checkData['value']) || !isset($checkData['value'])) {

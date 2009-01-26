@@ -12,13 +12,25 @@
  * 
  */
 
-require_once(dirname(__FILE__) .'/../cs-arrayToPath/arrayToPathClass.php');
+require_once(dirname(__FILE__) .'/../cs-arrayToPath/cs_arrayToPath.class.php');
+require_once(dirname(__FILE__) .'/../cs-versionparse/cs_version.abstract.class.php');
 
-abstract class cs_phpxmlAbstract {
+abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 	
 	public $isTest = FALSE;
+	protected $a2p;
 	
-	abstract public function __construct();
+	//=========================================================================
+	public function __construct(array $data=null) {
+		if(!is_array($data)) {
+			$data = array();
+		}
+		$this->a2p = new cs_arrayToPath($data);
+		$this->set_version_file_location(dirname(__FILE__) . '/VERSION');
+	}//end __construct()
+	//=========================================================================
+	
+	
 	
 	//=========================================================================
 	/**
@@ -40,67 +52,5 @@ abstract class cs_phpxmlAbstract {
 	
 	
 	
-	//=========================================================================
-	/**
-	 * Retrieve our version string from the VERSION file.
-	 */
-	final public function get_version() {
-		$retval = NULL;
-		$versionFileLocation = dirname(__FILE__) .'/VERSION';
-		if(file_exists($versionFileLocation)) {
-			$myData = file($versionFileLocation);
-			
-			//set the logical line number that the version string is on, and 
-			//	drop by one to get the corresponding array index.
-			$lineOfVersion = 3;
-			$arrayIndex = $lineOfVersion -1;
-			
-			$myVersionString = trim($myData[$arrayIndex]);
-			
-			if(preg_match('/^VERSION: /', $myVersionString)) {
-				$retval = preg_replace('/^VERSION: /', '', $myVersionString);
-			}
-			else {
-				throw new exception(__METHOD__ .": failed to retrieve version string");
-			}
-		}
-		else {
-			throw new exception(__METHOD__ .": failed to retrieve version information");
-		}
-		
-		return($retval);
-	}//end get_version()
-	//=========================================================================
-	
-	
-	
-	//=========================================================================
-	final public function get_project() {
-		$retval = NULL;
-		$versionFileLocation = dirname(__FILE__) .'/VERSION';
-		if(file_exists($versionFileLocation)) {
-			$myData = file($versionFileLocation);
-			
-			//set the logical line number that the version string is on, and 
-			//	drop by one to get the corresponding array index.
-			$lineOfProject = 4;
-			$arrayIndex = $lineOfProject -1;
-			
-			$myProject = trim($myData[$arrayIndex]);
-			
-			if(preg_match('/^PROJECT: /', $myProject)) {
-				$retval = preg_replace('/^PROJECT: /', '', $myProject);
-			}
-			else {
-				throw new exception(__METHOD__ .": failed to retrieve project string");
-			}
-		}
-		else {
-			throw new exception(__METHOD__ .": failed to retrieve project information");
-		}
-		
-		return($retval);
-	}//end get_project()
-	//=========================================================================
 }
 ?>
