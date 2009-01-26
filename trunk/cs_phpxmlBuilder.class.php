@@ -30,7 +30,6 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	 * The construct.  Pass the array in here, then call get_xml_string() to see the results.
 	 */
 	public function __construct($xmlArray) {
-		$this->get_version();
 		if(is_array($xmlArray) && count($xmlArray)) {
 			//all looks good.  Give 'em the go ahead.
 			$this->goAhead = TRUE;

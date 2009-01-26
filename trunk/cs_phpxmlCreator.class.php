@@ -68,7 +68,6 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * The constructor.
 	 */
 	public function __construct($rootElement="main", array $xmlns=NULL) {
-		$this->get_version();
 		//check to ensure there's a real element.
 		if(!strlen($rootElement)) {
 			//Give it a default root element.
@@ -550,7 +549,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * Takes an XMLParser object & loads data from it as the internal XML array. This 
 	 * facilitates the ability to add data to existing XML.
 	 */
-	public function load_xmlparser_data(XMLParser $obj) {
+	public function load_xmlparser_data(cs_phpxmlParser $obj) {
 		$data = $obj->get_tree();
 		$this->xmlArray = $data;
 		$this->a2p = new cs_arrayToPath($data);

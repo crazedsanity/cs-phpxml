@@ -26,7 +26,6 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 			$data = array();
 		}
 		$this->a2p = new cs_arrayToPath($data);
-		$this->set_version_file_location(dirname(__FILE__) . '/VERSION');
 	}//end __construct()
 	//=========================================================================
 	
