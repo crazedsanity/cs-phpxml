@@ -55,7 +55,7 @@
 
 require_once(dirname(__FILE__) ."/cs_phpxml.abstract.class.php");
 
-class cs_phpxmlCreator extends cs_xmlAbstract {
+class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	private $xmlArray;
 	private $lastTag;
 	private $rootElement;
