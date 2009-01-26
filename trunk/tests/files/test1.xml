@@ -1,0 +1,25 @@
+<main>
+	<multiple>
+		<item>0</item>
+		<item>1</item>
+		<item>2</item>
+		<item>3</item>
+		<item>4</item>
+	</multiple>
+	<deep_path>
+		<zeroth>
+			<first>
+				<second>
+					<third>
+						<fourth>
+							<fifth>Value to lOOk For</fifth>
+						</fourth>
+					</third>
+				</second>
+			</first>
+		</zeroth>
+	</deep_path>
+	<html_characters>
+		<brackets>&lt;br&gt;</brackets>
+	</html_characters>
+</main>
