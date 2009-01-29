@@ -11,8 +11,8 @@
  * Last Updated:::::::: $Date$
  * 
  * 
- * Methods to create XML that's parseable by xmlBuilder{}.  Eliminates the need for manually creating
- * a massive array, just to feed it into xmlBuilder: it's assumed that the XML is being built in-line,
+ * Methods to create XML that's parseable by cs_phpxmlBuilder{}.  Eliminates the need for manually creating
+ * a massive array, just to feed it into cs_phpxmlBuilder: it's assumed that the XML is being built in-line,
  * though there are methods for "going back" and modifying specific items within a specific tag (tags 
  * that have the same name are represented numerically).
  * 
@@ -31,7 +31,7 @@
  * </cart>
  * 
  * NOTE ON PATHS:
- * 	arrayToPath{} facilitates referencing items within an array using a path: in the example XML (above),
+ * 	cs_arrayToPath{} facilitates referencing items within an array using a path: in the example XML (above),
  * 	the element with the value of "foo" would be in the path "/cart/item/0/name" (the number after "item"
  * 	indicates it is programatically the first element within "cart" with the element name of "item").
  * 
@@ -211,7 +211,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * Creates an XML string based upon the current internal array structure.
 	 */
 	public function create_xml_string($addXmlVersion=FALSE) {
-		$xmlBuilder = new xmlBuilder($this->a2p->get_data());
+		$xmlBuilder = new cs_phpxmlBuilder($this->a2p->get_data());
 		$retval = $xmlBuilder->get_xml_string($addXmlVersion);
 		return($retval);
 		
