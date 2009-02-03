@@ -22,6 +22,7 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 	
 	//=========================================================================
 	public function __construct(array $data=null) {
+		$this->set_version_file_location(dirname(__FILE__) . '/VERSION');
 		if(!is_array($data)) {
 			$data = array();
 		}
