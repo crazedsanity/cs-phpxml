@@ -28,21 +28,27 @@ class testOfCSPHPXML extends UnitTestCase {
 	//-------------------------------------------------------------------------
 	function test_pass_data_through_all_classes() {
 		
-		//first, put it into cs-phpxmlParser.
-		$testFile = dirname(__FILE__) .'/files/test1.xml';
-		$parser = new cs_phpxmlParser(file_get_contents($testFile));
+		$testFiles = array(
+			dirname(__FILE__) .'/files/test1.xml',
+			dirname(__FILE__) .'/files/test2.xml'
+		);
 		
-		//now move it into the creator.
-		$creator = new cs_phpxmlCreator($parser->get_root_element());
-		$creator->load_xmlparser_data($parser);
-		
-		//now move the data into the xmlBuilder (would be used to make the content of the XML file)
-		$builder = new cs_phpxmlBuilder($creator->get_data());
-		
-		//okay, now let's compare it to the original contents.
-		$origMd5 = md5(file_get_contents($testFile));
-		$newMd5  = md5($builder->get_xml_string());
-		$this->assertEqual($origMd5, $newMd5);
+		foreach($testFiles as $testFile) {
+			//first, put it into cs-phpxmlParser.
+			$parser = new cs_phpxmlParser(file_get_contents($testFile));
+			
+			//now move it into the creator.
+			$creator = new cs_phpxmlCreator($parser->get_root_element());
+			$creator->load_xmlparser_data($parser);
+			
+			//now move the data into the xmlBuilder (would be used to make the content of the XML file)
+			$builder = new cs_phpxmlBuilder($creator->get_data());
+			
+			//okay, now let's compare it to the original contents.
+			$origMd5 = md5(file_get_contents($testFile));
+			$newMd5  = md5($builder->get_xml_string());
+			$this->assertEqual($origMd5, $newMd5);
+		}
 		
 	}//end test_pass_data_through_all_classes
 	//-------------------------------------------------------------------------
