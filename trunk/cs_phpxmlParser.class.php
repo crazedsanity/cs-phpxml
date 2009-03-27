@@ -73,23 +73,26 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
  * TODO: implement something to take array like this class returns & put it in XML form.
  */
 
-	var $data;			// Input XML data buffer
-	var $vals;			// Struct created by xml_parse_into_struct
-	var $collapse_dups;	// If there is only one tag of a given name,
-						//   shall we store as scalar or array?
-	var $index_numeric;	// Index tags by numeric position, not name.
-						//   useful for ordered XML like CallXML.
+	private $data;			// Input XML data buffer
+	private $vals;			// Struct created by xml_parse_into_struct
 	private $xmlTags;
 	private $xmlIndex;
 	private $levelArr;
 	private $childTagDepth = 0;
 	private $makeSimpleTree = FALSE;
 	
+	private $pathIndex=0;
+	private $pathList = array();
+	
+	private $multiplesTest=array();
+	private $pathMultiples=array();
+	private $curPath=null;
+	
 	//=================================================================================
 	/**
 	 * CONSTRUCTOR: Read in XML on object creation, via raw data (string), stream, filename, or URL.
 	 */
-	function __construct($data_source, $data_source_type='raw', $collapse_dups=1, $index_numeric=0) {
+	function __construct($data_source, $data_source_type='raw') {
 		parent::__construct(array());
 		if($data_source === 'unit_test') {
 			//this is only a test... don't do anything.
@@ -97,8 +100,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		}
 		else {
 			$this->get_version();
-			$this->collapse_dups = $collapse_dups;
-			$this->index_numeric = $index_numeric;
 			$this->data = '';
 			if($data_source_type == 'raw') {
 				$this->data = $data_source;
@@ -119,6 +120,8 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 				throw new exception(__METHOD__ .": FATAL: unable to find resource");
 			}
 		}
+		
+		$this->gf = new cs_globalFunctions;
 	}//end __construct()
 	//=================================================================================
 	
@@ -141,6 +144,8 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		xml_parser_free($parser);
 		
 		$i = -1;
+		
+		$this->gf->debug_print(htmlentities($this->data));
 		return($this->get_children($vals, $i));
 	}//end get_tree()
 	//=================================================================================
@@ -155,7 +160,7 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		
 		$tag = array();
 		$tag['type'] = $type;
-
+		
 		if($type === 'complete') {
 			// complete tag, just return it for storage in array.
 			if($this->makeSimpleTree) {
@@ -167,6 +172,23 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 				}
 				if(isset($thisvals['value'])) {
 					$tag['value'] = $thisvals['value'];
+				}
+			}
+			
+			//test to see how many pathMultiples this current path matches...
+//			$this->gf->debug_print("--- COMPLETE --- <b>". __METHOD__ .": curPath=(". $this->curPath .")</b>, Multiples Test so far::: " 
+//					. $this->gf->debug_print($this->multiplesTest,0,1) 
+//					//. $this->gf->debug_print(func_get_args(),0,1)
+//				);
+			
+			$matches = 0;
+			$matchPath = $this->curPath;
+			$path = $matchPath . $thisvals['tag'];
+			foreach($this->multiplesTest as $p=>$v) {
+				if(preg_match('/^'. addslashes($matchPath) .'/', $p)) {
+					$path = $path .'/'. $v;
+					
+					$this->gf->debug_print("<b><font color='red'>". __METHOD__ ."</font></b>: path=(". $path ."), v=(". $v .")");
 				}
 			}
 		}
@@ -183,6 +205,7 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 				unset($tag['attributes'], $tag['type']);
 			}
 		}
+		#$this->gf->debug_print("--- END --- <b>". __METHOD__ .": curPath=(". $this->curPath .")</b>, Multiples Test so far::: ". $this->gf->debug_print($this->multiplesTest,0,1));
 		
 
 		return($tag);
@@ -198,48 +221,83 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	private function get_children($vals, &$i) {
 		$children = array();     // Contains node data
 		
-		if ($i > -1 && isset($vals[$i]['value'])) {
-			//Node has CDATA before it's children.
-			$children['VALUE'] = $vals[$i]['value'];
+		if($i == -1) {
+			$this->pathIndex=0;
+			$this->pathList=array();
 		}
-
+		
+		$this->curPath = $this->pathList[$this->pathIndex];
+			
+			//do some magical changes here...
+//			if($this->multiplesTest[$this->pathList[$this->pathIndex]] > 1) {
+//				$this->gf->debug_print(__METHOD__ .": Multiples Test SO FAR::: ". $this->gf->debug_print($this->multiplesTest,0,1));
+//				exit;
+//			}
+		
 		// Loop through children, until hit close tag or run out of tags
 		while (++$i < count($vals)) {
 			$type = $vals[$i]['type'];
 			
-			/* TODO: find something that causes this instance to fire-off, so I can tell WTF it should do.
-			if ($type === 'cdata')
-			{
-				//TODO: find somewhere that causes this instance to fire off, so we can 
-				// 'cdata':	Node has CDATA after one of it's children
-				// 		(Add to cdata found before in this case)
-				$children['VALUE'] .= $vals[$i]['value'];
-			}
-			else#*/
 			if($type === 'complete' || $type === 'open') {
 				// 'complete':	At end of current branch
 				// 'open':	Node has children, recurse
-				$tag = $this->build_tag($vals[$i], $vals, $i, $type);
-				if ($this->index_numeric) {
-					$tag['TAG'] = $vals[$i]['tag'];
-					$children[] = $tag;
+				
+				if($type == 'complete') {
+					
+					//TODO: If a new path is along an existing path, expand it out to include all sub-paths...
+					/*
+					 * EXAMPLE (from unit testing, see tests/files/test1.xml):
+					 * 	/MAIN/MULTIPLE/0/ITEM/0
+					 * 	/MAIN/MULTIPLE/0/ITEM/1
+					 * 	/MAIN/MULTIPLE/0/ITEM/2
+					 * 	/MAIN/MULTIPLE/0/ITEM/3/AGAIN/0/TEST
+					 * 	/MAIN/MULTIPLE/0/ITEM/3/AGAIN
+					 * 	/MAIN/MULTIPLE/0/ITEM/4
+					 * 	/MAIN/MULTIPLE/1/ONE
+					 * 	/MAIN/MULTIPLE/1/TWO
+					 * 	/MAIN/MULTIPLE/1/THREE
+					 */
+					$newPathIndex = ($this->pathIndex +1);
+					$this->pathList[$newPathIndex] = $this->pathList[$this->pathIndex];
+					$this->pathList[$this->pathIndex] .= '/'. $vals[$i]['tag'];
+					
+					//add the path to possible multiples (any path with a count > 1 is a multiples path).
+					$this->multiplesTest[$this->pathList[$this->pathIndex]]++;
+					
+					$myNumericPrefix = $this->multiplesTest[$this->pathList[$this->pathIndex]];
+					
+					$this->pathIndex++;
 				}
 				else {
-					$children[$vals[$i]['tag']][] = $tag;
+					$this->pathList[$this->pathIndex] .= '/'. $vals[$i]['tag'];
 				}
+				
+				$tag = $this->build_tag($vals[$i], $vals, $i, $type);
+				
+				$children[$vals[$i]['tag']][] = $tag;
 			}
 			elseif ($type === 'close') {
+				
+				$this->multiplesTest[$this->pathList[$this->pathIndex]]++;
 				// 'close:	End of node, return collected data
 				//		Do not increment $i or nodes disappear!
+				$bits = $this->explode_path($this->pathList[$this->pathIndex]);
+				array_pop($bits);
+				$this->pathList[$this->pathIndex] = $this->path_from_array($bits);
 				break;
+			}
+			else {
+				throw new exception(__METHOD__ .": found invalid type (". $type .")");
 			}
 		} 
 		
-		if ($this->collapse_dups) {
-			foreach($children as $key => $value) {
-				if (is_array($value) && (count($value) == 1)) {
-					$children[$key] = $value[0];
-				}
+		
+		foreach($children as $key => $value) {
+			if (is_array($value) && (count($value) == 1)) {
+				$children[$key] = $value[0];
+			}
+			else {
+				#$this->gf->debug_print(__METHOD__ .": found numeric list at (". $this->pathList[($this->pathIndex -1)] ." - ". $this->pathIndex .")::: ". $this->gf->debug_print($children,0,1));
 			}
 		}
 		return $children;
@@ -306,6 +364,70 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		return($retval);
 		
 	}//end get_attribute()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	public function update_a2p(cs_arrayToPath &$a2p) {
+		$a2p->reload_data($this->a2p->get_data());
+		return($a2p);
+	}//end update_a2p()	
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	/** Returns a list of paths (path=>count) indicating where a tag is written multiple
+	 * times.  In the following example, "testone" and "test3" are both "multiples":::
+	 * 
+	 * <main>
+	 * 	<testone>
+	 * 		<x>y</x>
+	 * 	</testone>
+	 * 	<testone>
+	 * 		<y>z</y>
+	 * 	</testone>
+	 * 	<test2>
+	 * 		<x />
+	 * 		<y>y</y>
+	 * 	</test2>
+	 * 	<test3>
+	 * 		<see />
+	 * 	</test3>
+	 * 	<test3>
+	 * 		<now />
+	 * 	</test3>
+	 * </main
+	 */
+	public function get_path_multiples() {
+//		if(!count($this->pathList) || !count($this->multiplesTest)) {
+//			$this->tree();
+//		}
+//		
+//		if(is_array($this->multiplesTest)) {
+//			$retval = array();
+//			foreach($this->multiplesTest as $path=>$count) {
+//				if(is_numeric($count)) {
+//					if($count > 1) {
+//						$retval[$path] = $count;
+//					}
+//				}
+//				else {
+//					throw new exception(__METHOD__ .": found non-numeric value in multiplesTest at path=(". $path ."), value=(". $count .")");
+//				}
+//			}
+//			$this->gf->debug_print($retval);
+//			exit;
+//		}
+//		else {
+//			throw new exception(__METHOD__ .": failed to find data for internal multiples test");
+//		}
+		
+		$retval = $this->pathMultiples;
+		
+		return($retval);
+	}//end get_path_multiples()
 	//=================================================================================
 }
 

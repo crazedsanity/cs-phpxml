@@ -1,0 +1,12 @@
+<main>
+	<config>
+		<settings note="first settings block">
+			<first>1</first>
+			<second>2</second>
+		</settings>
+		<settings>
+			<another>1</another>
+			<again>2</again>
+		</settings>
+	</config>
+</main>
