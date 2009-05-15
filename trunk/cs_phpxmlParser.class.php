@@ -185,7 +185,7 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 			$matchPath = $this->curPath;
 			$path = $matchPath . $thisvals['tag'];
 			foreach($this->multiplesTest as $p=>$v) {
-				if(preg_match('/^'. addslashes($matchPath) .'/', $p)) {
+				if(preg_match('/^'.  preg_replace('/\//', '\\\/', $matchPath) .'/', $p)) {
 					$path = $path .'/'. $v;
 					
 					$this->gf->debug_print("<b><font color='red'>". __METHOD__ ."</font></b>: path=(". $path ."), v=(". $v .")");
