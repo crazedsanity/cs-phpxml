@@ -13,22 +13,24 @@
  * 
  * Methods to create XML that's parseable by cs_phpxmlBuilder{}.  Eliminates the need for manually creating
  * a massive array, just to feed it into cs_phpxmlBuilder: it's assumed that the XML is being built in-line,
- * though there are methods for "going back" and modifying specific items within a specific tag (tags 
- * that have the same name are represented numerically).
+ * though there are methods for "going back" and modifying specific items within a specific tag (in the example
+ * below, the value of NAME in the second ITEM would be referenced as "/CART/ITEM/1/NAME", where "1" indicates 
+ * it is the second item--0 is programmatically the first index).
  * 
  * EXAMPLE OF THE EXPECTED RETURNED XML:
- * <cart>
- * 		<item comment="1">
- * 			<name>foo</name>
- * 			<value>lots</value>
- * 			<extra location="the internet" />
- * 		</item>
- * 		<item comment="2">
- * 			<name>bar</name>
- * 			<value currency="USD">even more</value>
- * 			<extra location="unknown" />
- * 		</item>
- * </cart>
+ * 
+ * <CART>
+ * 		<ITEM comment="1">
+ * 			<NAME>foo</NAME>
+ * 			<VALUE>lots</VALUE>
+ * 			<EXTRA location="the internet" />
+ * 		</ITEM>
+ * 		<ITEM comment="2">
+ * 			<NAME>bar</NAME>
+ * 			<VALUE currency="USD">even more</VALUE>
+ * 			<EXTRA location="unknown" />
+ * 		</ITEM>
+ * </CART>
  * 
  * NOTE ON PATHS:
  * 	cs_arrayToPath{} facilitates referencing items within an array using a path: in the example XML (above),
@@ -38,7 +40,9 @@
  * PATH CASE:
  * 	Because of the way PHP processes XML trees, regular tags are stored in UPPER CASE.  Attributes and
  * 	values (the data between open & close tags) are stored in lowercase.  Any paths given will be 
- * 	automatically changed to UPPER case.
+ * 	automatically changed to UPPER case.  Note that it is not possible to have a path which directly 
+ *  references an attribute (using the example above, "/CART/ITEM/2/VALUE/currency" would fail: a call 
+ *  would have to be made to update the attribute "currency" on the path "/CART/ITEM/2/VALUE").
  * 
  * MULTIPLE SAME-NAME TAGS WITHIN THE SAME TAG:
  * 	In the example XML (above), the path "/cart/item" will have two numeric sub-indexes in the internal
@@ -50,7 +54,29 @@
  * 	have been created properly.
  * 
  * CODE TO CREATE THAT XML:::
- * (forthcoming)
+
+		 $xml = new cs_phpxmlCreator('cart');
+		 
+		 //build tags in the first "ITEM" tag.
+		 $xml->add_tag('/cart/item/name', "foo");
+		 $xml->add_tag('/cart/item/value', "lots");
+		 $xml->add_tag('/cart/item/extra', null);
+		 $xml->add_attribute('/cart/item', array('comment'=>"1"));
+		 $xml->add_attribute('/cart/item/extra', array('location'=>"the internet"));
+		 
+		 //We need to tell it that there's a NEW item tag...
+		 $xml->add_tag_multiple('/cart/item');
+		 
+		 //now items in the second "ITEM" tag (the call to add_tag_multiple() means calls along this path
+		 //		without specific indexes will work on the latest/lowest item on that path).
+		 // NOTE: in this tag, we'll add attributes when creating tags.
+		 $xml->add_tag('/cart/item', null, array('comment'=>"2")); //null value means it can have sub-tags.
+		 $xml->add_tag('/cart/item/name', "bar");
+		 $xml->add_tag('/cart/item/value', "even more", array('currency'=>"USD"));
+		 $xml->add_tag('/cart/item/extra', null, array('location'=>"unknown"));
+		 
+		 //finally, we'll create the xml string here, which can be written to a file or whatever.
+		 $xml->create_xml_string();
  */
 
 require_once(dirname(__FILE__) ."/cs_phpxml.abstract.class.php");
@@ -66,7 +92,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	/**
 	 * The constructor.	
 	 */
-	public function __construct($rootElement="main", array $xmlns=NULL) {
+	public function __construct($rootElement="main") {
 		//check to ensure there's a real element.
 		if(!strlen($rootElement)) {
 			//Give it a default root element.
@@ -95,13 +121,18 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * @param $attributes	(array,optional) name=>value array of attributes to add to this tag.
 	 */
 	public function add_tag($path, $value=NULL, array $attributes=NULL) {
-		
-		//TODO: check to see if the given path is part of a "multiples" (i.e. in $this->numericPaths) path.
-		$this->paths[$path] = $value;
-		if(!is_null($attributes)) {
-			cs_debug_backtrace(1);
-			exit;
-			$this->add_attribute($path, $attributes);
+		//TODO: call something to verify the path, especially if there are numbers in the path.
+		if(strlen($this->fix_path(path))) {
+			//fix the path to contain proper indexes.
+			$path = $this->fix_path($path);
+			$this->paths[$path] = $value;
+			
+			if(is_array($attributes) && count($attributes)) {
+				$this->add_attribute($path, $attributes);
+			}
+		}
+		else {
+			throw new exception(__METHOD__ .": invalid path string (". $path .")");
 		}
 		
 	}//end add_tag()
@@ -114,6 +145,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * Add attributes to the tag specified by $path.
 	 */
 	public function add_attribute($path, array $attributes) {
+throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 //		if($this->path_exists($path)) {
 			if(is_array($this->attributes[$path])) {
 				$this->attributes[$path] = array_merge($this->attributes[$path], $attributes);
@@ -137,6 +169,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * Creates an XML string based upon the current internal array structure.
 	 */
 	public function create_xml_string($addXmlVersion=FALSE) {
+throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		$data2Load = $this->a2p->get_data();
 		if(is_array($data2Load) && count($data2Load)) {
 			$xmlBuilder = new cs_phpxmlBuilder($this->a2p->get_data());
@@ -154,6 +187,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	private function create_tag($tagName, $value=NULL, array $attributes=NULL, $type=NULL) {
+throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		throw new exception(__METHOD__ .": fix me!!!!");
 		//upper-case the tagname.
 		$tagName = strtoupper($tagName);
@@ -194,25 +228,111 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	/**
-	 * Break the path into bits, and fix the case of each tag to UPPER, except for any
-	 * reserved words.
+	 * Break the path into bits, add numeric separators, and remove unwanted junk.
+	 * 
+	 * EXAMPLES:
+	 *    input                     ||  output
+	 * -----------------------------++---------------------
+	 *  /path/TO/3/Home             || /PATH/0/TO/3/HOME/0
+	 *  to/0/home/again             || /PATH/0/TO/0/HOME/0/AGAIN/0
+	 *  /path/3/TO/HOME/again/0		|| (exception - possible multiple roots)
+	 *  /0/path/to/home/0			|| (exception - starts with invalid path)
+	 *  /path/0/to/0/0/home			|| (exception - invalid location of numeric tag)
 	 */
 	private function fix_path($path) {
-		$path = preg_replace('/\/{2,}/', '/', $path);
-		$path = strtoupper($path);
 		
-		//break the path into an array.
-		$pathArr = $this->explode_path($path);
-		
-		//check if the first element is our root element: if not, add it.
-		if($pathArr[0] !== $this->rootElement) {
-			array_unshift($pathArr, $this->rootElement);
+		//clean out so the path is only alphanumeric and a select few non-alphanumerics.
+		//TODO: check the RFC to determine which characters are valid.
+		if(strlen($path)) {
+			$path = preg_replace("/[^A-Za-z0-9:\/\-\._]/", '', $path);
+		}
+		if(strlen($path) > 1) {
+			
+			$path = strtoupper($path);
+			if(preg_match("/\//", $path)) {
+				//it has slashes, lets assume all is good.
+				$path = preg_replace('/^\//', '', $path);
+			}
+			
+			//prepend root element as needed.
+			if(!preg_match('/^'. $this->rootElement .'/', $path)) {
+				$path = '/'. $this->rootElement .'/'. $path;
+			}
+		}
+		else {
+			throw new exception(__METHOD__ .": invalid length of path (". $path .")");
 		}
 		
-		//now reconstruct the path.
-		$path = $this->reconstruct_path($pathArr);
+		//final deal: let's add numbers to the path as required.
+		$originalPath = $path;
+		$bits = explode('/', $path);
 		
-		return($path);
+		//strip off the first index (rootElement) and it's number (if present), which 
+		//	should always be zero (valid XML can have only one root element).
+		$test = array_shift($bits);
+		if($test !== $this->rootElement) {
+			throw new exception(__METHOD__ .": path (". $path .") does not begin with root element");
+		}
+		if(is_numeric($bits[0])) {
+			$test = array_shift($bits);
+			if($test != 0) {
+				throw new exception(__METHOD__ .": found invalid numeric index under root (". $test ."):"
+					." multiple root elements not allowed in an XML document");
+			}
+		}
+		
+		//now add numeric indexes as needed.
+		$tag2Index = array();
+		
+		//only  (i.e. in "ROOT/0/PATH/1/TO/0/HEAVEN/0", the non numerics are in 0, 2, 4, and 6
+		//	0=ROOT, 2=PATH, 4=TO, 6=HEAVEN [i.e. ROOT/PATH/TO/HEAVEN])
+		/*
+		 * FINAL ARRAY:::
+		 * 		$tag2Index = array (
+		 * 			[ROOT]		=> 0,
+		 * 			[PATH]		=> 1,
+		 * 			[TO]		=> 0,
+		 * 			[HEAVEN]	=> 0
+		 * 		);
+		 */
+		$lastIndexNumeric=false;
+		//foreach($bits as $i=>$tagOrIndex) {
+		for($i=0; $i<count($bits); $i++) {
+			$myPathIndex = 0;
+			$checkNext = $bits[($i +1)];
+			if(isset($bits[$i]) && (!is_numeric($bits[$i]) || preg_match('/^[A-Z]/', $bits[$i]))) {
+				$tagOrIndex = $bits[$i];
+				//okay, we've got a text string: check if the next item is a number...
+				if(is_numeric($checkNext)) {
+					//user explicitly set numeric in path (i.e. "/ROOT/PATH/1/TO/HEAVEN")
+					$myPathIndex = $checkNext;
+					$lastIndexNumeric=true;
+					$i++;
+					
+					//TODO: should we add this to the "path multiples" somewhere?
+				}
+				$tag2Idex[$tagOrIndex] = $myPathIndex;
+			}
+			else {
+				throw new exception(__METHOD__ .": while walking path, attempted to access invalid "
+					."index (". $i .") [starting at zero] or found invalid location of numeric "
+					."(". $bits[$i] .")");
+			}
+		}
+		
+		if(is_array($tag2Index) && count($tag2Index)) {
+			$newPath = '';
+			foreach($tag2Index as $tagName => $tagIndex) {
+				$newPath .= '/'. $tagName .'/'. $tagIndex;
+			}
+		}
+		else {
+			throw new exception(__METHOD__ .": failed to produce array of tags to indexes after "
+				."processing path (". $path .")");
+		}
+		
+		return($newPath);
+		
 	}//end fix_path()
 	//=================================================================================
 	
@@ -225,6 +345,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * TODO: this is basically the same as cs_phpxmlAbstract::path_from_array(); consolidate.
 	 */
 	private function reconstruct_path(array $pathArr) {
+throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		//setup the path variable.
 		$path = "";
 		foreach($pathArr as $index=>$tagName) {
@@ -248,6 +369,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * tags...
 	 */
 	public function set_tag_as_multiple($path) {
+throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		//add this path to our internal array of numeric paths.
 		$this->numericPaths[$path]++;
 	}//end set_tag_as_multiple()
@@ -261,6 +383,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * complete.
 	 */
 	public function create_path($path) {
+throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		
 		$retval = $this->add_tag($path,null);
 		
@@ -294,6 +417,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * $xml->add_tag_multiple('/main/songs', $myArr[1]);
 	 */
 	public function add_tag_multiple($path, array $data, array $attributes=NULL) {
+throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		
 		try {
 			$this->create_path($path);
@@ -325,6 +449,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * after the class has been instantiated.  Here's where to do it.
 	 */
 	public function rename_root_element($newName) {
+throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		//TODO: check to ensure paths are set properly, or are purposely devoid of rootElement.
 		$this->rootElement = strtoupper($newName);
 	}//end rename_root_element()
@@ -337,6 +462,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * Calls $this->a2p->get_data($path).  Just a wrapper for private data.
 	 */
 	public function get_data($path=NULL) {
+throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		$retval = $this->a2p->get_data($path);
 		return($retval);
 	}//end get_data()
@@ -349,6 +475,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * facilitates the ability to add data to existing XML.
 	 */
 	public function load_xmlparser_data(cs_phpxmlParser $obj) {
+throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		
 		//dump arrayToPath data from the given object into our internal one.
 //		$obj->update_a2p($this->a2p);
@@ -448,7 +575,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	public function remove_path($path) {
-		throw new exception(__METHOD__ .": fix me!!!!");
+throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		if(!is_null($path)) {
 			$this->a2p->unset_data($path);
 		}
@@ -462,6 +589,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	protected function path_exists($path) {
+throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		
 		//TODO: consider handling requests for paths within numeric indexes (i.e. where at tag is used multiple times)
 		if(strlen($path)) {
