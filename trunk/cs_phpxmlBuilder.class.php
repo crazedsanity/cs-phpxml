@@ -14,10 +14,11 @@ require_once(dirname(__FILE__) ."/cs_phpxml.abstract.class.php");
 
 	
 class cs_phpxmlBuilder extends cs_phpxmlAbstract {
+	protected $rootElement = NULL;
+	
 	private $goAhead = FALSE;
 	private $xmlArray = NULL;
 	private $xmlString = "";
-	private $rootElement = NULL;
 	private $depth = 0;
 	private $maxDepth = 50; //if the code gets past this depth of nested tags, assume something went wrong & die.
 	private $crossedPaths = array (); //list of paths that have been traversed in the array.
@@ -31,15 +32,26 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	 */
 	public function __construct($xmlArray) {
 		if(is_array($xmlArray) && count($xmlArray)) {
-			//all looks good.  Give 'em the go ahead.
-			$this->goAhead = TRUE;
-			$this->xmlArray = $xmlArray;
 			
-			//create an arrayToPath{} object.
-			parent::__construct($xmlArray);
-			
-			//process the data.
-			$this->process_xml_array();
+			if(isset($xmlArray['tags']) && isset($xmlArray['attributes']) && isset($xmlArray['rootElement'])) {
+				//all looks good.  Give 'em the go ahead.
+				$this->goAhead = TRUE;
+				$this->xmlArray = $xmlArray;
+				$this->rootElement = $this->xmlArray['rootElement'];
+				unset($this->xmlArray['rootElement']);
+				
+				//create an arrayToPath{} object.
+				parent::__construct($xmlArray);
+				
+				$gf = new cs_globalFunctions;
+				$gf->debug_print($this);
+				
+				//process the data.
+				$this->process_xml_array();
+			}
+			else {
+				throw new exception(__METHOD__ .": expected array containing rootElement and XML paths to tags and attributes");
+			}
 		}
 	}//end __construct()
 	//=================================================================================
@@ -54,6 +66,48 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	private function process_xml_array() {
 		//make sure we've got the "goAhead" 
 		if($this->goAhead == TRUE) {
+			
+			
+			$depthTree = array();
+			foreach($this->xmlArray['tags'] as $path=>$tagVal) {
+				$pathDepth = $this->get_path_depth($path);
+				$depthTree[$pathDepth][] = $path;
+			}
+			
+			
+			
+			//build a depth tree, so we can work our way up the tree.
+			$gf = new cs_globalFunctions;
+			$gf->debug_print($depthTree);
+			ksort($depthTree);
+			$gf->debug_print($depthTree);
+			
+			
+			$a2p = new cs_arrayToPath(array());
+			foreach($depthTree as $depth=>$data) {
+				foreach($data as $path) {
+					if(is_null($a2p->get_data($path))) {
+						$gf->debug_print(__METHOD__ .": setting data into path (". $path .") with data: ". $this->xmlArray['tags'][$path]);
+						$a2p->set_data($path, $this->xmlArray['tags'][$path]);
+					}
+					else {
+						throw new exception(__METHOD__ .": found existing data on path(". $path .")::: ". $a2p->get_data($path));
+					}
+				}
+			}
+			
+			$gf->debug_print($a2p);
+			
+			
+			
+			
+			
+			
+throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
+			
+			
+			
+			
 			//rip-out the root element.
 			$keys = array_keys($this->xmlArray);
 			

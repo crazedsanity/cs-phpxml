@@ -83,9 +83,9 @@ require_once(dirname(__FILE__) ."/cs_phpxml.abstract.class.php");
 require_once(dirname(__FILE__) ."/cs_phpxmlBuilder.class.php");
 
 class cs_phpxmlCreator extends cs_phpxmlAbstract {
-	private $rootElement;
-	private $numericPaths = array();
+	protected $rootElement;
 	private $paths=array();
+	private $pathMultiples=array();
 	private $attributes = array();
 	
 	//=================================================================================
@@ -122,9 +122,26 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 */
 	public function add_tag($path, $value=NULL, array $attributes=NULL) {
 		//TODO: call something to verify the path, especially if there are numbers in the path.
-		if(strlen($this->fix_path(path))) {
+		if(strlen($this->fix_path($path))) {
 			//fix the path to contain proper indexes.
 			$path = $this->fix_path($path);
+			
+			$builtParentMultiples = $this->build_parent_path_multiples($path);
+			
+			$this->gf->debug_print(__METHOD__ .": built ". $builtParentMultiples ." multiples from path (". $path .")");
+			
+				$oldPath = $path;
+			//check to see if this is part of another path: if it is, we gotta increment that final value.
+			$path = $this->update_path_multiple($path);
+//			if(isset($this->pathMultiples[$path])) {
+//				$oldPath = $path;
+//				$path = $this->update_path_multiple($path, false);
+				$this->gf->debug_print(__METHOD__ .": updating path from '". $oldPath ."' to '". $path ."'");
+//			}
+			
+//			$this->gf->debug_print($this->pathMultiples);
+//			$this->gf->debug_print($this->paths);
+			
 			$this->paths[$path] = $value;
 			
 			if(is_array($attributes) && count($attributes)) {
@@ -135,6 +152,9 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 			throw new exception(__METHOD__ .": invalid path string (". $path .")");
 		}
 		
+		//this returns the path it was actually created on.
+		return($path);
+		
 	}//end add_tag()
 	//=================================================================================
 	
@@ -142,23 +162,19 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	/**
-	 * Add attributes to the tag specified by $path.
+	 * Add attributes to the tag specified by $path. If the path does not exist, it will 
+	 * be created.
 	 */
 	public function add_attribute($path, array $attributes) {
-throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
-//		if($this->path_exists($path)) {
-			if(is_array($this->attributes[$path])) {
-				$this->attributes[$path] = array_merge($this->attributes[$path], $attributes);
-			}
-			else {
-				$this->attributes[$path] = $attributes;
-			}
-//		}
-//		else {
-//			$this->gf->debug_print(__METHOD__ .": about to throw an exception... here's the backtrace::: ". htmlentities(cs_debug_backtrace(0)));
-//			throw new exception(__METHOD__ .": attempted to add attribute to non-existent path (". $path .")");
-//		}
 		
+		$path = $this->fix_path($path);
+		if(!isset($this->paths[$path])) {
+			//WARNING!!! passing attributes to add_tag() will cause an endless loop and SEGFAULT!
+			$path = $this->add_tag($path,null);
+		}
+		$this->attributes[$path] = $attributes;
+		
+		return($path);
 	}//end add_attribute()
 	//=================================================================================
 	
@@ -169,6 +185,30 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 	 * Creates an XML string based upon the current internal array structure.
 	 */
 	public function create_xml_string($addXmlVersion=FALSE) {
+		
+		
+		$this->a2p = new cs_arrayToPath(array());
+		foreach($this->paths as $p=>$v) {
+			$this->a2p->set_data($p, $v);
+		}
+		
+		$gf = new cs_globalFunctions();
+		$gf->debug_print($this->a2p,1);
+		$dataToPass = array(
+			'rootElement'	=> $this->rootElement,
+			'tags'			=> $this->paths,
+			'attributes'	=> $this->attributes
+		);
+		$gf->debug_print($dataToPass);
+		$gf->debug_print(new cs_phpxmlBuilder($dataToPass));
+		
+		
+		
+		
+		
+		
+		
+		
 throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		$data2Load = $this->a2p->get_data();
 		if(is_array($data2Load) && count($data2Load)) {
@@ -228,133 +268,35 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 	
 	//=================================================================================
 	/**
-	 * Break the path into bits, add numeric separators, and remove unwanted junk.
-	 * 
-	 * EXAMPLES:
-	 *    input                     ||  output
-	 * -----------------------------++---------------------
-	 *  /path/TO/3/Home             || /PATH/0/TO/3/HOME/0
-	 *  to/0/home/again             || /PATH/0/TO/0/HOME/0/AGAIN/0
-	 *  /path/3/TO/HOME/again/0		|| (exception - possible multiple roots)
-	 *  /0/path/to/home/0			|| (exception - starts with invalid path)
-	 *  /path/0/to/0/0/home			|| (exception - invalid location of numeric tag)
-	 */
-	private function fix_path($path) {
-		
-		//clean out so the path is only alphanumeric and a select few non-alphanumerics.
-		//TODO: check the RFC to determine which characters are valid.
-		if(strlen($path)) {
-			$path = preg_replace("/[^A-Za-z0-9:\/\-\._]/", '', $path);
-		}
-		if(strlen($path) > 1) {
-			
-			$path = strtoupper($path);
-			if(preg_match("/\//", $path)) {
-				//it has slashes, lets assume all is good.
-				$path = preg_replace('/^\//', '', $path);
-			}
-			
-			//prepend root element as needed.
-			if(!preg_match('/^'. $this->rootElement .'/', $path)) {
-				$path = '/'. $this->rootElement .'/'. $path;
-			}
-		}
-		else {
-			throw new exception(__METHOD__ .": invalid length of path (". $path .")");
-		}
-		
-		//final deal: let's add numbers to the path as required.
-		$originalPath = $path;
-		$bits = explode('/', $path);
-		
-		//strip off the first index (rootElement) and it's number (if present), which 
-		//	should always be zero (valid XML can have only one root element).
-		$test = array_shift($bits);
-		if($test !== $this->rootElement) {
-			throw new exception(__METHOD__ .": path (". $path .") does not begin with root element");
-		}
-		if(is_numeric($bits[0])) {
-			$test = array_shift($bits);
-			if($test != 0) {
-				throw new exception(__METHOD__ .": found invalid numeric index under root (". $test ."):"
-					." multiple root elements not allowed in an XML document");
-			}
-		}
-		
-		//now add numeric indexes as needed.
-		$tag2Index = array();
-		
-		//only  (i.e. in "ROOT/0/PATH/1/TO/0/HEAVEN/0", the non numerics are in 0, 2, 4, and 6
-		//	0=ROOT, 2=PATH, 4=TO, 6=HEAVEN [i.e. ROOT/PATH/TO/HEAVEN])
-		/*
-		 * FINAL ARRAY:::
-		 * 		$tag2Index = array (
-		 * 			[ROOT]		=> 0,
-		 * 			[PATH]		=> 1,
-		 * 			[TO]		=> 0,
-		 * 			[HEAVEN]	=> 0
-		 * 		);
-		 */
-		$lastIndexNumeric=false;
-		//foreach($bits as $i=>$tagOrIndex) {
-		for($i=0; $i<count($bits); $i++) {
-			$myPathIndex = 0;
-			$checkNext = $bits[($i +1)];
-			if(isset($bits[$i]) && (!is_numeric($bits[$i]) || preg_match('/^[A-Z]/', $bits[$i]))) {
-				$tagOrIndex = $bits[$i];
-				//okay, we've got a text string: check if the next item is a number...
-				if(is_numeric($checkNext)) {
-					//user explicitly set numeric in path (i.e. "/ROOT/PATH/1/TO/HEAVEN")
-					$myPathIndex = $checkNext;
-					$lastIndexNumeric=true;
-					$i++;
-					
-					//TODO: should we add this to the "path multiples" somewhere?
-				}
-				$tag2Idex[$tagOrIndex] = $myPathIndex;
-			}
-			else {
-				throw new exception(__METHOD__ .": while walking path, attempted to access invalid "
-					."index (". $i .") [starting at zero] or found invalid location of numeric "
-					."(". $bits[$i] .")");
-			}
-		}
-		
-		if(is_array($tag2Index) && count($tag2Index)) {
-			$newPath = '';
-			foreach($tag2Index as $tagName => $tagIndex) {
-				$newPath .= '/'. $tagName .'/'. $tagIndex;
-			}
-		}
-		else {
-			throw new exception(__METHOD__ .": failed to produce array of tags to indexes after "
-				."processing path (". $path .")");
-		}
-		
-		return($newPath);
-		
-	}//end fix_path()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
 	 * Takes an array created by explode_path() and reconstitutes it into a proper path.
 	 * 
 	 * TODO: this is basically the same as cs_phpxmlAbstract::path_from_array(); consolidate.
 	 */
-	private function reconstruct_path(array $pathArr) {
-throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
+	private function reconstruct_path(array $pathArr, $isTag2Index=false) {
 		//setup the path variable.
 		$path = "";
-		foreach($pathArr as $index=>$tagName) {
-			//add this tag to the current path.
-			$path = $this->create_list($path, $tagName, '/');
-		}
 		
-		//add the leading '/'.
-		$path = '/'. $path;
+		if($isTag2Index) {
+			/*
+			 * an array formatted as tag2Index means the index is the tagName, and the value 
+			 * is the tagNumber, I.E.:
+			 * 
+			 * array(
+			 * 		[ROOT]		=> 0,
+			 * 		[PATH]		=> 0,
+			 * 		[TO]		=> 2,
+			 * 		[HEAVEN]	=> 0
+			 * );
+			 * needs to become "/ROOT/0/PATH/0/TO/2/HEAVEN/0"
+			 */
+			$oldPathArr = $pathArr;
+			$pathArr = array();
+			foreach($oldPathArr as $tagName=>$tagNumber) {
+				$pathArr[] = $tagName;
+				$pathArr[] = $tagNumber;
+			}
+		}
+		$path = $this->path_from_array($pathArr);
 		
 		//give 'em what they want.
 		return($path);
@@ -365,13 +307,20 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 	
 	//=================================================================================
 	/**
-	 * The tag is set as having multiple indexes below it, so they're not parsed as numeric
-	 * tags...
+	 * The tag is set to have multiple instances of itself
 	 */
 	public function set_tag_as_multiple($path) {
-throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
-		//add this path to our internal array of numeric paths.
-		$this->numericPaths[$path]++;
+		$path = $this->fix_path($path);
+		$pathBits = $this->explode_path($path);
+		array_pop($pathBits);
+		$path = $this->path_from_array($pathBits);
+		
+		
+		$gf = new cs_globalFunctions;
+		$gf->debug_print($pathBits);
+		
+		//now update the internal tracker for that path.
+		$this->update_path_multiple($path);
 	}//end set_tag_as_multiple()
 	//=================================================================================
 	
@@ -383,8 +332,6 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 	 * complete.
 	 */
 	public function create_path($path) {
-throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
-		
 		$retval = $this->add_tag($path,null);
 		
 		return($retval);
@@ -396,45 +343,51 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 	
 	//=================================================================================
 	/**
-	 * Like add_tag() except that $path has numeric sub-indexes, & the data to be added
-	 * can be added as the next index (kinda like setting $array[] = $dataArr).  
+	 * Instead of calling add_tag() for a bunch of different paths, pass arrays to this 
+	 * method and it will do the work for you.
 	 * 
 	 * EXAMPLE: if multiple "songs" are beneath "/main/songs", call it like this:
 	 * $myArr = array
 	 * (
-	 * 		'first'	=> array
-	 * 		(
-	 * 			'title'		=> 'first title',
-	 * 			'artist'	=> 'Magic Man'
-	 * 		),
-	 * 		'second'	=> array
-	 * 		(
-	 * 			'title'		=> 'second title',
-	 * 			'artist'	=> 'Another ARtist'
-	 * 		)
+	 * 		'first/title'	=> "first title",
+	 * 		'first/artist'	=> "Magic Man",
+	 * 		'second/title'	=> "second title",
+	 * 		'second/artist'	=> "Another ARtist"
 	 * );
-	 * $xml->add_tag_multiple('/main/songs', $myArr[0]);
-	 * $xml->add_tag_multiple('/main/songs', $myArr[1]);
+	 * $myAttribs = array(
+	 * 		'first/title'	=> array('titleId'=>"123");
+	 * 		'second/title'	=> array('titleId'=>"55453", 'comment'=>"this is a test");
+	 * );
+	 * 
+	 * $xml->add_tag_multiple('/main/songs', $myArr, $myAttribs);
+	 * 
+	 * THE SAME CAN BE DONE USING add_tag():::
+	 * 
+	 * foreach($myArr as $subPath=>$value) {
+	 * 		$xml->add_tag('/main/songs/'. $subPath, $value, $myAttribs[$subPath]);
+	 * }
 	 */
-	public function add_tag_multiple($path, array $data, array $attributes=NULL) {
-throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
+	public function add_tag_multiple($path, array $subPath2Value, array $attributes=NULL) {
 		
-		try {
-			$this->create_path($path);
-			$this->set_tag_as_multiple($path);
-			
-			foreach($data as $tagSubPath=>$tagValue) {
-				$myPath = $path .'/'. $tagSubPath;
-				if(is_array($attributes) && isset($attributes[$tagSubPath])) {
-					$retval = $this->add_tag($tagSubPath, $tagValue, $attributes[$tagSubPath]);
+		$path = $this->fix_path($path);
+		
+		$gf = new cs_globalFunctions;
+		#$gf->debug_print(__METHOD__ .": original path is (". func_get_arg(0) ."), updated path is (". $path .")");
+		
+		$retval = array();
+		
+		if(is_array($subPath2Value) && count($subPath2Value)) {
+			foreach($subPath2Value as $subPath => $value) {
+				$myPath = $this->fix_path($path .'/'. $subPath);
+				$myAttr=null;
+				if(isset($attributes[$subPath]) && is_array($attributes[$subPath])) {
+					$myAttr = $attributes[$subPath];
 				}
-				else {
-					$retval = $this->add_tag($tagSubPath, $tagValue);
-				}
+				$retval[$subPath] = $this->add_tag($myPath, $value, $myAttr);
 			}
 		}
-		catch(exception $e) {
-			throw new exception(__METHOD__ .": caught exception: ". $e->getMessage());
+		else {
+			throw new exception(__METHOD__ .": invalid or missing data");
 		}
 		
 		return($retval);
@@ -449,9 +402,17 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 	 * after the class has been instantiated.  Here's where to do it.
 	 */
 	public function rename_root_element($newName) {
-throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
-		//TODO: check to ensure paths are set properly, or are purposely devoid of rootElement.
-		$this->rootElement = strtoupper($newName);
+		$newName = strtoupper($newName);
+		
+		$oldPaths = $this->paths;
+		$oldKeys = array_keys($this->paths);
+		$oldVals = array_values($this->paths);
+		$this->paths = array();
+		for($i=0; $i<count($oldPaths); $i++) {
+			$newPath = preg_replace('/^\/'. $this->rootElement .'/', '\/'. $newName, $oldKeys[$i]);
+			$this->paths[$newPath] = $oldVals[$i];
+		}
+		$this->rootElement = $newName;
 	}//end rename_root_element()
 	//=================================================================================
 	
@@ -478,7 +439,6 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		
 		//dump arrayToPath data from the given object into our internal one.
-//		$obj->update_a2p($this->a2p);
 		$a2p = new cs_arrayToPath(array());
 		$obj->update_a2p($a2p);
 		
@@ -574,30 +534,56 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 	
 	
 	//=================================================================================
-	public function remove_path($path) {
-throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
-		if(!is_null($path)) {
-			$this->a2p->unset_data($path);
+	/**
+	 * Destroy a given path and all paths beneath it...
+	 */
+	public function remove_path($path,$destroySubs=false) {
+		
+		$path = $this->fix_path($path);
+		
+		$retval = 0;
+		if(isset($this->paths[$path])) {
+			unset($this->paths[$path]);
+			$retval++;
 		}
-		else {
-			throw new exception(__METHOD__ .": invalid path given (". $path .")");
+		
+		//$pathRegexed = preg_replace('/\//', '\\\/', $path);
+		$destroyed = 0;
+		$pathRegexed = str_replace('/', '//', $path);
+		foreach($this->paths as $i=>$v) {
+			//$i = preg_replace('/\//', '\\\/', $i);
+			if(preg_match('/^'. $pathRegexed .'/', $i)) {
+				if($destroySubs) {
+					unset($this->paths[$i]);
+					$retval++;
+				}
+				else {
+					throw new exception(__METHOD__ .": the given path (". $path .") has"
+						." at least one sibling (". $i .")");
+				}
+			}
 		}
+		
+		//TODO: should it throw an exception if $retval==0?
+		
+		return($retval);
 	}//end remove_path();
 	//=================================================================================
 	
 	
 	
 	//=================================================================================
+	/**
+	 * Determine if the given path actually exists.
+	 */
 	protected function path_exists($path) {
-throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
 		
 		//TODO: consider handling requests for paths within numeric indexes (i.e. where at tag is used multiple times)
+		$path = $this->fix_path($path);
 		if(strlen($path)) {
-			if(is_numeric(array_search($this->fix_path($path), $this->paths))) {
+			$retval = false;
+			if(isset($this->paths[$path])) {
 				$retval = true;
-			}
-			else {
-				$retval = false;
 			}
 		}
 		else {
@@ -607,5 +593,72 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 		return($retval);
 	}//end path_exists()
 	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	protected function build_parent_path_multiples($path) {
+		$tag2Index = $this->create_tag2index($path);
+		
+		//since we're only verifying/building parent multiples, drop the last tag.
+		array_pop($tag2Index);
+		
+		$retval = 0;
+		if(is_array($tag2Index)) {
+			$myPath = "";
+			foreach($tag2Index as $curTag=>$index) {
+				$myPath .= '/'. $curTag .'/'. $index;
+				
+				if(!isset($this->pathMultiples[$myPath])) {
+					//$this->pathMultiples[$myPath] = 0;
+					$this->update_path_multiple($myPath,true);
+					$retval++;
+				}
+			}
+		}
+		
+		return($retval);
+	}//end build_parent_path_multiples()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	private function update_path_multiple($path, $justInitializeIt=false) {
+		$path = $this->fix_path($path);
+		$pathBits = $this->explode_path($path);
+		
+		$lastBit = array_pop($pathBits);
+		if(is_numeric($lastBit)) {
+			$index = $this->path_from_array($pathBits);
+			
+			if(!preg_match('/^\//', $index)) {
+				throw new exception(__METHOD__ .": path_from_array() failed to create proper string...!!!");
+			}
+			
+			if(isset($this->pathMultiples[$index])) {
+				if($justInitializeIt === false) {
+					$this->pathMultiples[$index]++;
+					$this->gf->debug_print("<font color='red'><b>". __METHOD__ ."</b></font>: updating path multiple for (". $index .") to (". $this->pathMultiples[$index] 
+							.") -- onlyIfNotPresent=(". $this->gf->interpret_bool($justInitializeIt) .")");
+				}
+			}
+			else {
+				$this->gf->debug_print("<b>". __METHOD__ ."</b>: initializing path multiple for (". $index .")");
+				$this->pathMultiples[$index]=0;
+			}
+			$retval = $index .'/'. $this->pathMultiples[$index];
+			
+			$this->gf->debug_print(__METHOD__ .": setting retval as (". $retval .")");
+		}
+		else {
+			throw new exception(__METHOD__ .": invalid lastBit on path (". $path .")");
+		}
+		
+		return($retval);
+		
+	}//end update_path_multiple()
+	//=================================================================================
+	
 }//end xmlCreator{}
 ?>
