@@ -128,19 +128,8 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 			
 			$builtParentMultiples = $this->build_parent_path_multiples($path);
 			
-			$this->gf->debug_print(__METHOD__ .": built ". $builtParentMultiples ." multiples from path (". $path .")");
-			
-				$oldPath = $path;
 			//check to see if this is part of another path: if it is, we gotta increment that final value.
 			$path = $this->update_path_multiple($path);
-//			if(isset($this->pathMultiples[$path])) {
-//				$oldPath = $path;
-//				$path = $this->update_path_multiple($path, false);
-				$this->gf->debug_print(__METHOD__ .": updating path from '". $oldPath ."' to '". $path ."'");
-//			}
-			
-//			$this->gf->debug_print($this->pathMultiples);
-//			$this->gf->debug_print($this->paths);
 			
 			$this->paths[$path] = $value;
 			
@@ -262,45 +251,6 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 		//give 'em what they want.
 		return($myTag);
 	}//end create_tag()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
-	 * Takes an array created by explode_path() and reconstitutes it into a proper path.
-	 * 
-	 * TODO: this is basically the same as cs_phpxmlAbstract::path_from_array(); consolidate.
-	 */
-	private function reconstruct_path(array $pathArr, $isTag2Index=false) {
-		//setup the path variable.
-		$path = "";
-		
-		if($isTag2Index) {
-			/*
-			 * an array formatted as tag2Index means the index is the tagName, and the value 
-			 * is the tagNumber, I.E.:
-			 * 
-			 * array(
-			 * 		[ROOT]		=> 0,
-			 * 		[PATH]		=> 0,
-			 * 		[TO]		=> 2,
-			 * 		[HEAVEN]	=> 0
-			 * );
-			 * needs to become "/ROOT/0/PATH/0/TO/2/HEAVEN/0"
-			 */
-			$oldPathArr = $pathArr;
-			$pathArr = array();
-			foreach($oldPathArr as $tagName=>$tagNumber) {
-				$pathArr[] = $tagName;
-				$pathArr[] = $tagNumber;
-			}
-		}
-		$path = $this->path_from_array($pathArr);
-		
-		//give 'em what they want.
-		return($path);
-	}//end reconstruct_path()
 	//=================================================================================
 	
 	

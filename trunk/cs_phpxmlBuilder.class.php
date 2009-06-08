@@ -16,7 +16,6 @@ require_once(dirname(__FILE__) ."/cs_phpxml.abstract.class.php");
 class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	protected $rootElement = NULL;
 	
-	private $goAhead = FALSE;
 	private $xmlArray = NULL;
 	private $xmlString = "";
 	private $depth = 0;
@@ -34,17 +33,12 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 		if(is_array($xmlArray) && count($xmlArray)) {
 			
 			if(isset($xmlArray['tags']) && isset($xmlArray['attributes']) && isset($xmlArray['rootElement'])) {
-				//all looks good.  Give 'em the go ahead.
-				$this->goAhead = TRUE;
 				$this->xmlArray = $xmlArray;
 				$this->rootElement = $this->xmlArray['rootElement'];
 				unset($this->xmlArray['rootElement']);
 				
 				//create an arrayToPath{} object.
 				parent::__construct($xmlArray);
-				
-				$gf = new cs_globalFunctions;
-				$gf->debug_print($this);
 				
 				//process the data.
 				$this->process_xml_array();
@@ -60,12 +54,11 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	/**
-	 * Takes an array like the one that $this->get_tree() spits-out, and turns it back 
-	 * into an XML string.
+	 * Turns a list of paths to XML tags and list of paths to attributes, and turns all 
+	 * of it into a coherent XML file.
 	 */
 	private function process_xml_array() {
 		//make sure we've got the "goAhead" 
-		if($this->goAhead == TRUE) {
 			
 			
 			$depthTree = array();
@@ -77,63 +70,64 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 			
 			
 			//build a depth tree, so we can work our way up the tree.
-			$gf = new cs_globalFunctions;
-			$gf->debug_print($depthTree);
-			ksort($depthTree);
-			$gf->debug_print($depthTree);
+			$this->gf = new cs_globalFunctions;
+			$this->gf->debug_print($depthTree);
+			krsort($depthTree);
+			$this->gf->debug_print($depthTree);
 			
 			
-			$a2p = new cs_arrayToPath(array());
+			$rootPaths = array();
+			foreach($this->xmlArray['tags'] as $tagPath=>$crap) {
+				$a = $this->create_tag2index($tagPath);
+				array_pop($a);
+				
+				$newPath = $this->reconstruct_path($a,true);
+				$rootPaths[$newPath][] = $tagPath;
+			}
+			
+			$this->gf->debug_print($rootPaths);
+			ksort($rootPaths);
+			$this->gf->debug_print($rootPaths);
+			
+			
+			//TODO: use $rootPaths (sorted) to build tags (see below)
+			//the sorted rootPaths should allow for creation of each path really quickly, with 
+			//	adding of attributes as the only real drawback.
+			
+			
+			
+			
+			//this will build the array structure for the XML, similar to the way it used to when it
+			//	relied heavily on cs_arrayToPath{}...
+			$this->a2p = new cs_arrayToPath(array());
 			foreach($depthTree as $depth=>$data) {
 				foreach($data as $path) {
-					if(is_null($a2p->get_data($path))) {
-						$gf->debug_print(__METHOD__ .": setting data into path (". $path .") with data: ". $this->xmlArray['tags'][$path]);
-						$a2p->set_data($path, $this->xmlArray['tags'][$path]);
+					if(is_null($this->a2p->get_data($path))) {
+						$this->gf->debug_print(__METHOD__ .": setting data into path (". $path .") with data: ". $this->xmlArray['tags'][$path]);
+						$this->a2p->set_data($path, $this->xmlArray['tags'][$path]);
 					}
 					else {
-						throw new exception(__METHOD__ .": found existing data on path(". $path .")::: ". $a2p->get_data($path));
+						throw new exception(__METHOD__ .": found existing data on path(". $path .")::: ". $this->a2p->get_data($path));
 					}
 				}
 			}
 			
-			$gf->debug_print($a2p);
+			#$this->gf->debug_print($this->a2p);
 			
 			
+			$this->process_tags(null);
 			
 			
-			
-			
-throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
-			
-			
-			
-			
-			//rip-out the root element.
-			$keys = array_keys($this->xmlArray);
-			
-			if(count($keys) !== 1) {
-				//there should only be ONE root element.
-				throw new exception(__METHOD__ ."(): multiple root elements (or none) found!");
-			}
-			else {
-				//set the root element.
-				$this->rootElement = $keys[0];
-				
-				//pull the rootElement out of the equation.
-				$rootAttributes = $this->a2p->get_data("/". $this->rootElement ."/attributes");
-				if(is_array($rootAttributes)) {
-					//remove it from our internal array.
-					$this->a2p->unset_data("/". $this->rootElement ."/attributes");
-				}
-				//now remove the "type" index.
-				$this->a2p->unset_data("/". $this->rootElement ."/type");
-			}
-			
+			$this->gf->debug_print(htmlentities($this->xmlString));
+exit(__FILE__ ." -- ". __LINE__);
 			//open a tag for the root element.
-			$this->open_tag($this->rootElement, $rootAttributes);
+			//$this->open_tag($this->rootElement, $rootAttributes);
+			
 			
 			//loop through the array...
-			$this->process_sub_arrays('/'. $this->rootElement);
+			$this->process_sub_arrays($this->fix_path('/'. $this->rootElement));
+			$this->gf->debug_print(htmlentities($this->xmlString));
+throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
 			
 			//close the root element.
 			$this->xmlString .= "\n";
@@ -141,12 +135,8 @@ throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
 			
 			//tell 'em it's all good.
 			$retval = TRUE;
-		}
-		else {
-			//no dice, pal.
-			$retval = FALSE;
-		}
-		
+			
+			
 		return($retval);
 	}//end process_xml_array()
 	//=================================================================================
@@ -198,7 +188,7 @@ throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
 		
 		if($singleTag) {
 			//it's a single tag, i.e.: <tag comment="i am single" />
-			$retval .= '/';
+			$retval .= ' /';
 		}
 		$retval .= ">";
 		
@@ -260,181 +250,7 @@ throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
 	 * @param $parentTag	(str,optional) passed if there's multiple same-name tags at that level...
 	 */
 	private function process_sub_arrays($path='/', $parentTag=NULL) {
-		$this->iteration++;
-		if($this->iteration > $this->maxIterations) {
-			//deep recursion!
-			throw new exception(__METHOD__ ."(): too many iterations (". $this->iteration .")!");
-		}
-		elseif(is_null($path) || strlen($path) == 0) {
-			//bad.
-			throw new exception(__METHOD__ ."(): bad path ($path)!");
-		}
-		
-		//pull the data we're going to be working with.
-		$subArray = $this->a2p->get_data($path);
-		$origSubArray = $subArray;
-		
-		if(is_array($subArray)) {
-			/*
-			 * NOTE: "type" is always set, except for numeric indexes: for instance, if there are
-			 * multiple "item" tags beneath "items" (/CART/ITEMS/ITEM), then /CART/ITEMS/type exists,
-			 * but /CART/ITEMS/ITEM/type does NOT: /CART/ITEMS/ITEM/0/type, however, does exist.
-			 */
-			//set the type & attributes stuff.
-			{
-				if(isset($subArray['type']) || isset($subArray['attributes'])) {
-					$parentType = $subArray['type'];
-					$parentAttribs = $subArray['attributes'];
-					unset($subArray['type'], $subArray['attributes']);
-				}
-			}
-			
-			if(!is_null($parentTag)) {
-				//open the tag.
-				$this->open_tag($parentTag, $parentAttribs);
-			}
-			
-			//loop through the array.
-			foreach($subArray as $tagName=>$data) {
-				if(is_array($data)) {
-					$type = NULL;
-					if(isset($data['type'])) {
-						$type = $data['type'];
-						unset($data['type']);
-					}
-					
-					$attrArr = NULL;
-					if(isset($data['attributes'])) {
-						//pull it.
-						$attrArr = $data['attributes'];
-						
-						//remove it.
-						unset($data['attributes']);
-					}
-					
-					$tagValue = NULL;
-					if(isset($data['value'])) {
-						$tagValue = $data['value'];
-						unset($data['value']);
-					}
-					
-					//if there's a type, deal with it.  If not, deal with that, too.
-					if(!is_null($type) && !is_numeric($tagName)) {
-						if($type === 'open') {
-							//open the tag...
-							$this->open_tag($tagName, $attrArr);
-							
-							//loop through the sub-data...
-							foreach($data as $subTagName => $subData) {
-								//update the path, call self, sally forth, tally ho.
-								$myPath = $this->create_list($path, $tagName .'/'. $subTagName, '/');
-								
-								//run a pre-check on that piece of the data...
-								$checkData = $this->a2p->get_data($myPath);
-								if(isset($checkData['type']) && $checkData['type'] === 'open') {
-									//
-									$this->process_sub_arrays($myPath, $subTagName);
-								}
-								elseif(isset($checkData['type']) && $checkData['type'] === 'complete') {
-									//it's complete.  Just create the tag here.
-									if(isset($checkData['value'])) {
-										//got a value...
-										$this->open_tag($subTagName, $checkData['attributes']);
-										$this->add_value_plus_close_tag($checkData['value'], $subTagName);
-									}
-									else {
-										//stand-alone (single) tag.
-										$this->open_tag($subTagName, $checkData['attributes'], TRUE);
-									}
-								}
-								else {
-									//nothin' doin'
-									$this->process_sub_arrays($myPath);
-								}
-							}
-							
-							//now close the tag.
-							$this->close_tag($tagName);
-						}
-						elseif($type === 'complete') {
-							//TODO: deal with $parentTag here.
-							//No need to go any further.
-							if(is_null($tagValue)) {
-								//single tag, no need to close it.
-								$this->open_tag($tagName, $attrArr, TRUE);
-							}
-							else {
-								//got a value: open, append the value, & close it.
-								$this->open_tag($tagName, $attrArr);
-								$this->add_value_plus_close_tag($tagValue, $tagName);
-							}
-						}
-						else {
-							//unknown tag name.
-							throw new exception(__METHOD__ ."(): invalid tag type=($type)");
-						}
-					}
-					else {
-						
-						//null type....
-						if(is_array($data['0'])) {
-							$myBasePath = $this->create_list($path, $tagName, '/');
-							foreach($data as $numericIndex=>$numericSubData) {
-								$mySubPath = $this->create_list($myBasePath, $numericIndex, '/');
-								$this->process_sub_arrays($mySubPath, $tagName);
-							}
-						}
-						elseif(is_array($subArray['0'])) {
-							//special.  Don't know how, yet, but it's fscking special.
-							$myBasePath = $this->create_list($path, $tagName, '/');
-							$pathArr = $this->a2p->explode_path($myBasePath);
-							array_pop($pathArr);
-							
-							$useThisTagName = array_pop($pathArr);
-							$checkData = $this->a2p->get_data($myBasePath);
-							if($checkData['type'] === 'complete') {
-								//process it specially.
-								if(is_null($checkData['value']) || !isset($checkData['value'])) {
-									//single tag...
-									$this->open_tag($useThisTagName, $checkData['attributes'], TRUE);
-								}
-								else {
-									//single tag with value.
-									$this->open_tag($useThisTagName, $checkData['attributes']);
-									$this->add_value_plus_close_tag($checkData['value'], $useThisTagName);
-								}
-							}
-							else {
-								//pass it down the line.
-								$this->process_sub_arrays($myBasePath, $useThisTagName);
-							}
-						}
-						else {
-							//something broke.
-							throw new exception(__METHOD__ ."(): non-null type=($type) on numeric path=($path)");
-						}
-					}
-				}
-				else {
-					//TODO: is this ever triggered?  Should it cause an exception?
-					//not an array.
-					$this->xmlString .= $data;
-					$this->noDepthStringForCloseTag = TRUE;
-				}
-			}
-				
-			if(!is_null($parentTag)) {
-				//close the tag.
-				$this->close_tag($parentTag);
-			}
-		}
-		else {
-			throw new exception(__METHOD__ ."(): found non-array at path ($path)!");
-		}
-		
-		//decrement the iteration, so things know that we're finishing-up with the current one.
-		$this->iteration--;
-		
+		throw new exception(__METHOD__ .": DO NOT USE");
 	}//end process_sub_arrays()
 	//=================================================================================
 	
@@ -447,17 +263,7 @@ throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
 	 * 	"items" ("name"=1, "0"=2, and so on).
 	 */
 	private function get_parent_from_path($path, $goBackLevels=1) {
-		if($goBackLevels < 0) {
-			$goBackLevels = 1;
-		}
-		$path = preg_replace('/\/\//', '/', $path);
-		$path = preg_replace('/^\//', '', $path);
-		$pathArr = explode('/', $path);
-		
-		$pathArr = array_reverse($pathArr);
-		$retval = $pathArr[$goBackLevels];
-		
-		return($retval);
+		throw new exception(__METHOD__ .": DO NOT USE");
 	}//end get_parent_from_path()
 	//=================================================================================
 	
@@ -470,13 +276,82 @@ throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
 	private function add_value_plus_close_tag($value, $tagName) {
 		if(!strlen($value) || !strlen($tagName)) {
 			//fatal error.
-			throw new exception(__METHOD__ ."(): invalid value ($value), or no tagName ($tagName)!");
+			throw new exception(__METHOD__ ."(): invalid value (". $value ."), or no tagName (". $tagName .")!");
 		}
 		
 		//append the value, then close the tag.
 		$this->xmlString .= htmlentities($value);
-		$this->close_tag($tagName,FALSE);
+		$this->close_tag($tagName,false);
 	}//end add_value_plus_close_tag()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	private function process_tags($path=null) {
+		
+		//pull information for the given path.
+		$myData = $this->a2p->get_data($path);
+		
+		$keys = array_keys($myData);
+		
+		//go through all the keys.
+		foreach($keys as $i=>$tagName) {
+			if(!is_numeric($tagName)) {
+				$myPath = $path .'/'. $tagName;
+				$this->handle_tag_subs($myPath);
+			}
+			else {
+				throw new exception(__METHOD__ .": found numeric tag at path=(". $path .")");
+			}
+		}
+		
+	}//end process_tags()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	private function handle_tag_subs($path) {
+		if(strlen($path) && !is_numeric($path) && preg_match('/\//', $path)) {
+			
+			$myData = $this->a2p->get_data($path);
+			$myTag = array_pop($this->explode_path($path));
+			
+			if(is_array($myData)) {
+				foreach($myData as $pathMultiple=>$pathData) {
+					//$pathMultiple should be a number; $pathData is either text (open+close tag) or an array (open tag & pass to process_tags()).
+					
+					//pass arrays back to process_tags(), otherwise handle here.
+					$myPath = $path .'/'. $pathMultiple;
+					$attribs = $this->xmlArray['attributes'][$myPath];
+					$callProcessTags=false;
+					$singleTag=false;
+					if(is_array($pathData)) {
+						$this->open_tag($myTag, $attribs,false);
+						$this->process_tags($myPath);
+						$this->close_tag($myTag);
+					}
+					elseif(is_null($pathData) || !strlen($pathData)) {
+						//no need to put anything beneath the tag; it is single (nothing in it)
+						$this->open_tag($myTag, $attribs, true);
+					}
+					else {
+						//there aren't tags below it, so open tag, add data, & close it.
+						$this->open_tag($myTag, $attribs, false);
+						$this->add_value_plus_close_tag($pathData, $myTag	);
+					}
+				}
+			}
+			else {
+				throw new exception(__METHOD__ .": invalid data found at path=(". $path .")");
+			}
+		}
+		else {
+			throw new exception(__METHOD__ .": invalid path (". $path .")");
+		}
+		
+	}//end handle_tag_subs()
 	//=================================================================================
 
 }

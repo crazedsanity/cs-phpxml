@@ -240,5 +240,43 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 	
 	
 	
+	//=================================================================================
+	/**
+	 * Takes an array created by explode_path() and reconstitutes it into a proper path.
+	 * 
+	 * TODO: this is basically the same as cs_phpxmlAbstract::path_from_array(); consolidate.
+	 */
+	final protected function reconstruct_path(array $pathArr, $isTag2Index=false) {
+		//setup the path variable.
+		$path = "";
+		
+		if($isTag2Index) {
+			/*
+			 * an array formatted as tag2Index means the index is the tagName, and the value 
+			 * is the tagNumber, I.E.:
+			 * 
+			 * array(
+			 * 		[ROOT]		=> 0,
+			 * 		[PATH]		=> 0,
+			 * 		[TO]		=> 2,
+			 * 		[HEAVEN]	=> 0
+			 * );
+			 * needs to become "/ROOT/0/PATH/0/TO/2/HEAVEN/0"
+			 */
+			$oldPathArr = $pathArr;
+			$pathArr = array();
+			foreach($oldPathArr as $tagName=>$tagNumber) {
+				$pathArr[] = $tagName;
+				$pathArr[] = $tagNumber;
+			}
+		}
+		$path = $this->path_from_array($pathArr);
+		
+		//give 'em what they want.
+		return($path);
+	}//end reconstruct_path()
+	//=================================================================================
+	
+	
 }
 ?>
