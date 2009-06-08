@@ -175,33 +175,18 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 */
 	public function create_xml_string($addXmlVersion=FALSE) {
 		
-		
 		$this->a2p = new cs_arrayToPath(array());
-		foreach($this->paths as $p=>$v) {
-			$this->a2p->set_data($p, $v);
-		}
-		
-		$gf = new cs_globalFunctions();
-		$gf->debug_print($this->a2p,1);
-		$dataToPass = array(
-			'rootElement'	=> $this->rootElement,
-			'tags'			=> $this->paths,
-			'attributes'	=> $this->attributes
-		);
-		$gf->debug_print($dataToPass);
-		$gf->debug_print(new cs_phpxmlBuilder($dataToPass));
-		
-		
-		
-		
-		
-		
-		
-		
-throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
-		$data2Load = $this->a2p->get_data();
-		if(is_array($data2Load) && count($data2Load)) {
-			$xmlBuilder = new cs_phpxmlBuilder($this->a2p->get_data());
+		if(is_array($this->paths) && count($this->paths)) {
+			foreach($this->paths as $p=>$v) {
+				$this->a2p->set_data($p, $v);
+			}
+			
+			$dataToPass = array(
+				'rootElement'	=> $this->rootElement,
+				'tags'			=> $this->paths,
+				'attributes'	=> $this->attributes
+			);
+			$xmlBuilder = new cs_phpxmlBuilder($dataToPass);
 			$retval = $xmlBuilder->get_xml_string($addXmlVersion);
 		}
 		else {

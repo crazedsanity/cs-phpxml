@@ -59,40 +59,13 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	 */
 	private function process_xml_array() {
 		
-		
+		//build a depth tree, so we can work our way up the tree.
 		$depthTree = array();
 		foreach($this->xmlArray['tags'] as $path=>$tagVal) {
 			$pathDepth = $this->get_path_depth($path);
 			$depthTree[$pathDepth][] = $path;
 		}
-		
-		
-		
-		//build a depth tree, so we can work our way up the tree.
-		$this->gf = new cs_globalFunctions;
-		$this->gf->debug_print($depthTree);
 		krsort($depthTree);
-		$this->gf->debug_print($depthTree);
-		
-		
-		$rootPaths = array();
-		foreach($this->xmlArray['tags'] as $tagPath=>$crap) {
-			$a = $this->create_tag2index($tagPath);
-			array_pop($a);
-			
-			$newPath = $this->reconstruct_path($a,true);
-			$rootPaths[$newPath][] = $tagPath;
-		}
-		
-		$this->gf->debug_print($rootPaths);
-		ksort($rootPaths);
-		$this->gf->debug_print($rootPaths);
-		
-		
-		//TODO: use $rootPaths (sorted) to build tags (see below)
-		//the sorted rootPaths should allow for creation of each path really quickly, with 
-		//	adding of attributes as the only real drawback.
-		
 		
 		
 		
@@ -102,7 +75,6 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 		foreach($depthTree as $depth=>$data) {
 			foreach($data as $path) {
 				if(is_null($this->a2p->get_data($path))) {
-					$this->gf->debug_print(__METHOD__ .": setting data into path (". $path .") with data: ". $this->xmlArray['tags'][$path]);
 					$this->a2p->set_data($path, $this->xmlArray['tags'][$path]);
 				}
 				else {
@@ -111,32 +83,7 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 			}
 		}
 		
-		#$this->gf->debug_print($this->a2p);
-		
-		
-		$this->process_tags(null);
-		
-		
-		$this->gf->debug_print(htmlentities($this->xmlString));
-exit(__FILE__ ." -- ". __LINE__);
-		//open a tag for the root element.
-		//$this->open_tag($this->rootElement, $rootAttributes);
-		
-		
-		//loop through the array...
-		$this->process_sub_arrays($this->fix_path('/'. $this->rootElement));
-		$this->gf->debug_print(htmlentities($this->xmlString));
-throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
-		
-		//close the root element.
-		$this->xmlString .= "\n";
-		$this->close_tag($this->rootElement);
-		
-		//tell 'em it's all good.
-		$retval = TRUE;
-		
-		
-		return($retval);
+		return(true);
 	}//end process_xml_array()
 	//=================================================================================
 	
@@ -144,21 +91,18 @@ throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
 	
 	//=================================================================================
 	public function get_xml_string($addXmlVersion=FALSE) {
-		if($this->goAhead == TRUE) {
+		
+		//build the xml string.
+		$this->process_tags();
 			
-			//get the parsed data...
-			$retval = $this->xmlString;
-			
-			if($addXmlVersion) {
-				//Add the "<?xml version" stuff.
-				//TODO: shouldn't the encoding be an option... somewhere?
-				$retval = '<?xml version="1.0" encoding="UTF-8"?>'. "\n". $retval;
-			} 
-		}
-		else {
-			//FAILURE!
-			$retval = NULL;
-		}
+		//get the parsed data...
+		$retval = $this->xmlString;
+		
+		if($addXmlVersion) {
+			//Add the "<?xml version" stuff.
+			//TODO: shouldn't the encoding be an option... somewhere?
+			$retval = '<?xml version="1.0" encoding="UTF-8"?>'. "\n". $retval;
+		} 
 		
 		return($retval);
 	}//end get_xml_string()
@@ -234,6 +178,12 @@ throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
 				$retval .= "\t";
 			}
 		}
+		elseif($this->depth == 0) {
+			$retval = "\n";
+		}
+		else {
+			throw new exception(__METHOD__ .": invalid depth (". $this->depth .")");
+		}
 		
 		return($retval);
 	}//end create_depth_string()
@@ -296,7 +246,10 @@ throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
 					
 					//pass arrays back to process_tags(), otherwise handle here.
 					$myPath = $path .'/'. $pathMultiple;
-					$attribs = $this->xmlArray['attributes'][$myPath];
+					$attribs = null;
+					if(isset($this->xmlArray['attributes'][$myPath])) {
+						$attribs = $this->xmlArray['attributes'][$myPath];
+					}
 					$callProcessTags=false;
 					$singleTag=false;
 					if(is_array($pathData)) {
