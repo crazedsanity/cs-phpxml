@@ -59,27 +59,16 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	 */
 	private function process_xml_array() {
 		
-		//build a depth tree, so we can work our way up the tree.
-		$depthTree = array();
-		foreach($this->xmlArray['tags'] as $path=>$tagVal) {
-			$pathDepth = $this->get_path_depth($path);
-			$depthTree[$pathDepth][] = $path;
-		}
-		krsort($depthTree);
-		
-		
-		
 		//this will build the array structure for the XML, similar to the way it used to when it
 		//	relied heavily on cs_arrayToPath{}...
 		$this->a2p = new cs_arrayToPath(array());
-		foreach($depthTree as $depth=>$data) {
-			foreach($data as $path) {
-				if(is_null($this->a2p->get_data($path))) {
-					$this->a2p->set_data($path, $this->xmlArray['tags'][$path]);
-				}
-				else {
-					throw new exception(__METHOD__ .": found existing data on path(". $path .")::: ". $this->a2p->get_data($path));
-				}
+		
+		foreach($this->xmlArray['tags'] as $p=>$v) {
+			if(is_null($this->a2p->get_data($p))) {
+				$this->a2p->set_data($p, $v);
+			}
+			else {
+				throw new exception(__METHOD__ .": found existing data on path(". $p .")::: ". $this->a2p->get_data($p));
 			}
 		}
 		

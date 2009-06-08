@@ -506,17 +506,17 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 			if(isset($this->pathMultiples[$index])) {
 				if($justInitializeIt === false) {
 					$this->pathMultiples[$index]++;
-					$this->gf->debug_print("<font color='red'><b>". __METHOD__ ."</b></font>: updating path multiple for (". $index .") to (". $this->pathMultiples[$index] 
-							.") -- onlyIfNotPresent=(". $this->gf->interpret_bool($justInitializeIt) .")");
+//					$this->gf->debug_print("<font color='red'><b>". __METHOD__ ."</b></font>: updating path multiple for (". $index .") to (". $this->pathMultiples[$index] 
+//							.") -- onlyIfNotPresent=(". $this->gf->interpret_bool($justInitializeIt) .")");
 				}
 			}
 			else {
-				$this->gf->debug_print("<b>". __METHOD__ ."</b>: initializing path multiple for (". $index .")");
+//				$this->gf->debug_print("<b>". __METHOD__ ."</b>: initializing path multiple for (". $index .")");
 				$this->pathMultiples[$index]=0;
 			}
 			$retval = $index .'/'. $this->pathMultiples[$index];
 			
-			$this->gf->debug_print(__METHOD__ .": setting retval as (". $retval .")");
+//			$this->gf->debug_print(__METHOD__ .": setting retval as (". $retval .")");
 		}
 		else {
 			throw new exception(__METHOD__ .": invalid lastBit on path (". $path .")");

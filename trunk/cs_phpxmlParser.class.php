@@ -175,20 +175,12 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 				}
 			}
 			
-			//test to see how many pathMultiples this current path matches...
-//			$this->gf->debug_print("--- COMPLETE --- <b>". __METHOD__ .": curPath=(". $this->curPath .")</b>, Multiples Test so far::: " 
-//					. $this->gf->debug_print($this->multiplesTest,0,1) 
-//					//. $this->gf->debug_print(func_get_args(),0,1)
-//				);
-			
 			$matches = 0;
 			$matchPath = $this->curPath;
 			$path = $matchPath . $thisvals['tag'];
 			foreach($this->multiplesTest as $p=>$v) {
 				if(preg_match('/^'.  preg_replace('/\//', '\\\/', $matchPath) .'/', $p)) {
 					$path = $path .'/'. $v;
-					
-					$this->gf->debug_print("<b><font color='red'>". __METHOD__ ."</font></b>: path=(". $path ."), v=(". $v .")");
 				}
 			}
 		}
@@ -205,7 +197,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 				unset($tag['attributes'], $tag['type']);
 			}
 		}
-		#$this->gf->debug_print("--- END --- <b>". __METHOD__ .": curPath=(". $this->curPath .")</b>, Multiples Test so far::: ". $this->gf->debug_print($this->multiplesTest,0,1));
 		
 
 		return($tag);
