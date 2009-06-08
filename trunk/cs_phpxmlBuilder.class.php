@@ -58,85 +58,84 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	 * of it into a coherent XML file.
 	 */
 	private function process_xml_array() {
-		//make sure we've got the "goAhead" 
+		
+		
+		$depthTree = array();
+		foreach($this->xmlArray['tags'] as $path=>$tagVal) {
+			$pathDepth = $this->get_path_depth($path);
+			$depthTree[$pathDepth][] = $path;
+		}
+		
+		
+		
+		//build a depth tree, so we can work our way up the tree.
+		$this->gf = new cs_globalFunctions;
+		$this->gf->debug_print($depthTree);
+		krsort($depthTree);
+		$this->gf->debug_print($depthTree);
+		
+		
+		$rootPaths = array();
+		foreach($this->xmlArray['tags'] as $tagPath=>$crap) {
+			$a = $this->create_tag2index($tagPath);
+			array_pop($a);
 			
-			
-			$depthTree = array();
-			foreach($this->xmlArray['tags'] as $path=>$tagVal) {
-				$pathDepth = $this->get_path_depth($path);
-				$depthTree[$pathDepth][] = $path;
-			}
-			
-			
-			
-			//build a depth tree, so we can work our way up the tree.
-			$this->gf = new cs_globalFunctions;
-			$this->gf->debug_print($depthTree);
-			krsort($depthTree);
-			$this->gf->debug_print($depthTree);
-			
-			
-			$rootPaths = array();
-			foreach($this->xmlArray['tags'] as $tagPath=>$crap) {
-				$a = $this->create_tag2index($tagPath);
-				array_pop($a);
-				
-				$newPath = $this->reconstruct_path($a,true);
-				$rootPaths[$newPath][] = $tagPath;
-			}
-			
-			$this->gf->debug_print($rootPaths);
-			ksort($rootPaths);
-			$this->gf->debug_print($rootPaths);
-			
-			
-			//TODO: use $rootPaths (sorted) to build tags (see below)
-			//the sorted rootPaths should allow for creation of each path really quickly, with 
-			//	adding of attributes as the only real drawback.
-			
-			
-			
-			
-			//this will build the array structure for the XML, similar to the way it used to when it
-			//	relied heavily on cs_arrayToPath{}...
-			$this->a2p = new cs_arrayToPath(array());
-			foreach($depthTree as $depth=>$data) {
-				foreach($data as $path) {
-					if(is_null($this->a2p->get_data($path))) {
-						$this->gf->debug_print(__METHOD__ .": setting data into path (". $path .") with data: ". $this->xmlArray['tags'][$path]);
-						$this->a2p->set_data($path, $this->xmlArray['tags'][$path]);
-					}
-					else {
-						throw new exception(__METHOD__ .": found existing data on path(". $path .")::: ". $this->a2p->get_data($path));
-					}
+			$newPath = $this->reconstruct_path($a,true);
+			$rootPaths[$newPath][] = $tagPath;
+		}
+		
+		$this->gf->debug_print($rootPaths);
+		ksort($rootPaths);
+		$this->gf->debug_print($rootPaths);
+		
+		
+		//TODO: use $rootPaths (sorted) to build tags (see below)
+		//the sorted rootPaths should allow for creation of each path really quickly, with 
+		//	adding of attributes as the only real drawback.
+		
+		
+		
+		
+		//this will build the array structure for the XML, similar to the way it used to when it
+		//	relied heavily on cs_arrayToPath{}...
+		$this->a2p = new cs_arrayToPath(array());
+		foreach($depthTree as $depth=>$data) {
+			foreach($data as $path) {
+				if(is_null($this->a2p->get_data($path))) {
+					$this->gf->debug_print(__METHOD__ .": setting data into path (". $path .") with data: ". $this->xmlArray['tags'][$path]);
+					$this->a2p->set_data($path, $this->xmlArray['tags'][$path]);
+				}
+				else {
+					throw new exception(__METHOD__ .": found existing data on path(". $path .")::: ". $this->a2p->get_data($path));
 				}
 			}
-			
-			#$this->gf->debug_print($this->a2p);
-			
-			
-			$this->process_tags(null);
-			
-			
-			$this->gf->debug_print(htmlentities($this->xmlString));
+		}
+		
+		#$this->gf->debug_print($this->a2p);
+		
+		
+		$this->process_tags(null);
+		
+		
+		$this->gf->debug_print(htmlentities($this->xmlString));
 exit(__FILE__ ." -- ". __LINE__);
-			//open a tag for the root element.
-			//$this->open_tag($this->rootElement, $rootAttributes);
-			
-			
-			//loop through the array...
-			$this->process_sub_arrays($this->fix_path('/'. $this->rootElement));
-			$this->gf->debug_print(htmlentities($this->xmlString));
+		//open a tag for the root element.
+		//$this->open_tag($this->rootElement, $rootAttributes);
+		
+		
+		//loop through the array...
+		$this->process_sub_arrays($this->fix_path('/'. $this->rootElement));
+		$this->gf->debug_print(htmlentities($this->xmlString));
 throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
-			
-			//close the root element.
-			$this->xmlString .= "\n";
-			$this->close_tag($this->rootElement);
-			
-			//tell 'em it's all good.
-			$retval = TRUE;
-			
-			
+		
+		//close the root element.
+		$this->xmlString .= "\n";
+		$this->close_tag($this->rootElement);
+		
+		//tell 'em it's all good.
+		$retval = TRUE;
+		
+		
 		return($retval);
 	}//end process_xml_array()
 	//=================================================================================
