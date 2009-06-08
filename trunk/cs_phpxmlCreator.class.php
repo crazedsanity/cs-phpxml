@@ -182,11 +182,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 				$this->a2p->set_data($p, $v);
 			}
 			
-			$dataToPass = array(
-				'rootElement'	=> $this->rootElement,
-				'tags'			=> $this->paths,
-				'attributes'	=> $this->attributes
-			);
+			$dataToPass = $this->get_data();
 			$xmlBuilder = new cs_phpxmlBuilder($dataToPass);
 			$retval = $xmlBuilder->get_xml_string($addXmlVersion);
 		}
@@ -343,9 +339,13 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 	 * Calls $this->a2p->get_data($path).  Just a wrapper for private data.
 	 */
 	public function get_data($path=NULL) {
-throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
-		$retval = $this->a2p->get_data($path);
-		return($retval);
+		$dataToPass = array(
+				'rootElement'	=> $this->rootElement,
+				'tags'			=> $this->paths,
+				'attributes'	=> $this->attributes
+			);
+			
+		return($dataToPass);
 	}//end get_data()
 	//=================================================================================
 	

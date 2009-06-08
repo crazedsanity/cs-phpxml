@@ -226,7 +226,10 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 			$this->pathList=array();
 		}
 		
-		$this->curPath = $this->pathList[$this->pathIndex];
+		$this->curPath = null;
+		if(isset($this->pathList[$this->pathIndex])) {
+			$this->curPath = $this->pathList[$this->pathIndex];
+		}
 			
 			//do some magical changes here...
 //			if($this->multiplesTest[$this->pathList[$this->pathIndex]] > 1) {
