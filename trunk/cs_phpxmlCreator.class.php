@@ -157,7 +157,12 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	public function add_attribute($path, array $attributes) {
 		
 		$path = $this->fix_path($path);
-		$this->attributes[$path] = $attributes;
+		if(isset($this->attributes[$path])) {
+			$this->attributes[$path] = array_merge($this->attributes[$path], $attributes);
+		}
+		else {
+			$this->attributes[$path] = $attributes;
+		}
 		
 		return($path);
 	}//end add_attribute()
@@ -351,7 +356,11 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 	 * facilitates the ability to add data to existing XML.
 	 */
 	public function load_xmlparser_data(cs_phpxmlParser $obj) {
-throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED... BACKTRACE: ". cs_debug_backtrace(0));
+		//reset some internal data.
+		$this->paths = array();
+		$this->attributes = array();
+		$this->pathMultiples = array();
+		$this->rootElement = null;
 		
 		//dump arrayToPath data from the given object into our internal one.
 		$a2p = new cs_arrayToPath(array());
@@ -360,88 +369,26 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 		//reset internal "paths" (this will be systematically reset when creating new tags & such).
 		$this->paths = array();
 		$validPaths = $a2p->get_valid_paths();
+		$this->gf->debug_print($validPaths);
 		
-		$this->numericPaths = $obj->get_path_multiples();
-		
-		$this->gf->debug_print(htmlentities($this->gf->debug_print($obj,0,1)));
-		exit;
+		$this->rootElement = $validPaths[0];
+		$this->rootElement = preg_replace('/^\//', '', $this->rootElement);
+		$this->rootElement = preg_replace('/\/type$/', '', $this->rootElement);
+		if(preg_match('/\//', $this->rootElement)) {
+			throw new exception(__METHOD__ .": rootElement (". $this->rootElement .") contains invalid characters");
+		}
 		
 		foreach($validPaths as $i=>$path) {
-			$bits = $this->explode_path($path);
-			
-			if($bits[count($bits)-2] == 'attributes') {
-				#$this->gf->debug_print(__METHOD__ .": found attributes on (". $path .")::: ". htmlentities($this->gf->debug_print($a2p->get_data($path),0,1)));
-				
-				$attrName = array_pop($bits);
-				array_pop($bits); //drop the "attributes" part.
-				$attrPath = $this->path_from_array($bits);
-				
-				#$this->gf->debug_print(__METHOD__ .": creating path (". $attrPath .")");
-				
-				#$this->create_path($attrPath);
-				$this->add_attribute($attrPath, array($attrName=>$a2p->get_data($path)));
-				
+			if(preg_match('/\/value$/', $path)) {
+				$tagPath = preg_replace('/\/value/', '', $path);
+				$this->add_tag($tagPath, $a2p->get_data($path));
 			}
-			elseif($bits[count($bits)-1] == 'value') {
-				#$this->gf->debug_print(__METHOD__ .": found value on (". $path .")::: ". htmlentities($a2p->get_data($path)));
+			elseif(preg_match('/\/attributes\/(.*)$/', $path)) {
+				$bits = split('/attributes/', $path);
 				
-				array_pop($bits); //remove the "value" part from the path.
-				$myPath = $this->reconstruct_path($bits);
-				$this->add_tag($myPath, $a2p->get_data($path));
+				$this->add_attribute($bits[0], array($bits[1] => $a2p->get_data($path)));
 			}
 		}
-		
-		//now, for the sake of testing, load everything into our internal a2p object.
-		
-		$this->gf->debug_print($this->numericPaths);
-		exit;
-		
-		foreach($this->paths as $p=>$v) {
-			$data2Set = array(
-				'type'	=> "complete",
-				'value'	=> $v
-			);
-			
-			//break the path down & create types in each.
-			$bits = explode('/', $p);
-			if(!strlen($bits[0])) {
-				array_shift($bits);
-			}
-			$newPath = "";
-			foreach($bits as $chunk) {
-				$newPath .= '/'. $chunk;
-				
-				$data = $this->a2p->get_data($newPath);
-				if(!isset($this->numericPaths[$newPath]) && !isset($data['type'])) {
-					$data['type'] = 'open';
-					
-					$this->gf->debug_print(__METHOD__ .": originalPath=(<b>". $p ."</b>), setting type on path=(". $newPath .")");
-					$this->a2p->set_data($newPath, $data);
-				}
-			}
-			
-			$this->a2p->set_data($p, $data2Set);
-		}
-		
-		
-		#$this->gf->debug_print($this->a2p);
-		#exit;
-		
-		foreach($this->attributes as $p=>$a) {
-			$oldData = $this->a2p->get_data($p);
-			$setThis = array('attributes' => $a);
-			if(is_array($oldData)) {
-				$oldData['attributes'] = $a;
-				$setThis = $oldData;
-			}
-			$this->a2p->set_data($p, $setThis);
-		}
-		
-		
-		#$this->gf->debug_print($this->a2p->get_valid_paths());
-		
-		#$this->gf->debug_print(htmlentities($this->gf->debug_print($this,0)));
-//		exit;
 		
 	}//end load_xmlparser_data()
 	//=================================================================================
