@@ -244,33 +244,6 @@ throw new exception(__METHOD__ ." - line #". __LINE__ ."::: not finished yet");
 	
 	//=================================================================================
 	/**
-	 * Recursively processes the internal xmlArray.
-	 * 
-	 * @param $path				(str) the current "path" in the array, for arrayToPath{}.
-	 * @param $parentTag	(str,optional) passed if there's multiple same-name tags at that level...
-	 */
-	private function process_sub_arrays($path='/', $parentTag=NULL) {
-		throw new exception(__METHOD__ .": DO NOT USE");
-	}//end process_sub_arrays()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
-	 * Determine the parent tagname from the given path, optionally dropping back more than
-	 * 	one level (i.e. for "/main/cart/items/0/name/value", going back 3 levels returns
-	 * 	"items" ("name"=1, "0"=2, and so on).
-	 */
-	private function get_parent_from_path($path, $goBackLevels=1) {
-		throw new exception(__METHOD__ .": DO NOT USE");
-	}//end get_parent_from_path()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
 	 * Adds a "value" to the xmlString & closes the tag.
 	 */
 	private function add_value_plus_close_tag($value, $tagName) {
