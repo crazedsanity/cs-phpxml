@@ -178,11 +178,8 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 				$retval .= "\t";
 			}
 		}
-		elseif($this->depth == 0) {
+		elseif($this->depth == 0 && $this->iteration > 1) {
 			$retval = "\n";
-		}
-		else {
-			throw new exception(__METHOD__ .": invalid depth (". $this->depth .")");
 		}
 		
 		return($retval);
@@ -211,6 +208,8 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	private function process_tags($path=null) {
+		
+		$this->iteration++;
 		
 		//pull information for the given path.
 		$myData = $this->a2p->get_data($path);

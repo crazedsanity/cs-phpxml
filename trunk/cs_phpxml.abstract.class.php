@@ -112,6 +112,9 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 		if(strlen($path)) {
 			$path = preg_replace("/[^A-Za-z0-9:\/\-\._]/", '', $path);
 		}
+		$path = preg_replace('/\/{2,}/', '/', $path);
+		$page = preg_replace('/\/{1,}$/', '', $path);
+		
 		if(strlen($path) > 1) {
 			
 			$path = strtoupper($path);
@@ -135,7 +138,13 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 		
 		if(is_array($tag2Index) && count($tag2Index)) {
 			$newPath = '';
-			foreach($tag2Index as $tagName => $tagIndex) {
+			foreach($tag2Index as $i=>$myData) {
+				//$tagName => $tagIndex) {
+				$tagName = $myData[0];
+				$tagIndex = $myData[1];
+				#if(isset($this->pathMultiples[$newPath .'/'. $tagName])) {
+				#	$tagIndex = $this->pathMultiples[$newPath .'/'. $tagName];
+				#}
 				$newPath .= '/'. $tagName .'/'. $tagIndex;
 			}
 		}
@@ -180,10 +189,22 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 			/*
 			 * FINAL ARRAY:::
 			 * 		$tag2Index = array (
-			 * 			[ROOT]		=> 0,
-			 * 			[PATH]		=> 1,
-			 * 			[TO]		=> 0,
-			 * 			[HEAVEN]	=> 0
+			 * 			0	=> array (
+			 * 					0	=> ROOT,
+			 * 					1	=> 0
+			 * 				),
+			 * 			1	=> array (
+			 * 					0	=> PATH,
+			 * 					1	=> 1
+			 * 				),
+			 * 			2	=> array (
+			 * 					0	=> TO,
+			 * 					1	=> 0
+			 * 				),
+			 * 			3	=> array (
+			 * 					0	=> HEAVEN,
+			 * 					1	=> 0
+			 * 				)
 			 * 		);
 			 */
 			$lastIndexNumeric=false;
@@ -206,7 +227,10 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 						$lastIndexNumeric=true;
 						$i++;
 					}
-					$retval[$tagOrIndex] = $myPathIndex;
+					$retval[] = array(
+						0	=> $tagOrIndex,
+						1	=> $myPathIndex
+					);
 				}
 				else {
 					throw new exception(__METHOD__ .": while walking path, attempted to access invalid "

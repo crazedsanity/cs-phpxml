@@ -85,7 +85,7 @@ require_once(dirname(__FILE__) ."/cs_phpxmlBuilder.class.php");
 class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	protected $rootElement;
 	private $paths=array();
-	private $pathMultiples=array();
+	protected $pathMultiples=array();
 	private $attributes = array();
 	
 	//=================================================================================
@@ -157,10 +157,6 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	public function add_attribute($path, array $attributes) {
 		
 		$path = $this->fix_path($path);
-		if(!isset($this->paths[$path])) {
-			//WARNING!!! passing attributes to add_tag() will cause an endless loop and SEGFAULT!
-			$path = $this->add_tag($path,null);
-		}
 		$this->attributes[$path] = $attributes;
 		
 		return($path);
@@ -263,21 +259,6 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 	
 	//=================================================================================
 	/**
-	 * Creates all intermediary tags for the given path.  The final tag is assumed to be
-	 * complete.
-	 */
-	public function create_path($path) {
-		$retval = $this->add_tag($path,null);
-		
-		return($retval);
-		
-	}//end create_path()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
 	 * Instead of calling add_tag() for a bunch of different paths, pass arrays to this 
 	 * method and it will do the work for you.
 	 * 
@@ -307,7 +288,6 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 		$path = $this->fix_path($path);
 		
 		$gf = new cs_globalFunctions;
-		#$gf->debug_print(__METHOD__ .": original path is (". func_get_arg(0) ."), updated path is (". $path .")");
 		
 		$retval = array();
 		
@@ -541,7 +521,9 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 		$retval = 0;
 		if(is_array($tag2Index)) {
 			$myPath = "";
-			foreach($tag2Index as $curTag=>$index) {
+			foreach($tag2Index as $i=>$myData) {
+				$curTag = $myData[0];
+				$index = $myData[1];
 				$myPath .= '/'. $curTag .'/'. $index;
 				
 				if(!isset($this->pathMultiples[$myPath])) {
@@ -566,6 +548,9 @@ throw new exception(__METHOD__ ." - line #". __LINE__ .": NEEDS TO BE FINISHED..
 		$lastBit = array_pop($pathBits);
 		if(is_numeric($lastBit)) {
 			$index = $this->path_from_array($pathBits);
+			if(preg_match('/\/[0-9]$/', $index)) {
+				throw new exception(__METHOD__ .": invalid index (". $index .") from path=(". $path .") -- ORIGINAL=(". func_get_arg(0) .")");
+			}
 			
 			if(!preg_match('/^\//', $index)) {
 				throw new exception(__METHOD__ .": path_from_array() failed to create proper string...!!!");
