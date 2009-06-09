@@ -19,7 +19,8 @@ class testOfCSPHPXML extends UnitTestCase {
 	
 	//-------------------------------------------------------------------------
 	function __construct() {
-		$this->gfObj = new cs_globalFunctions;
+		$this->gfObj = new cs_globalFunctions();
+		$GLOBALS['DEBUGPRINTOPT']=1;
 	}//end __construct()
 	//-------------------------------------------------------------------------
 	
@@ -38,6 +39,7 @@ class testOfCSPHPXML extends UnitTestCase {
 			//first, put it into cs-phpxmlParser.
 			$parser = new cs_phpxmlParser(file_get_contents($testFile));
 			
+			#/*
 			//now move it into the creator.
 			$creator = new cs_phpxmlCreator($parser->get_root_element());
 			$creator->load_xmlparser_data($parser);
@@ -57,7 +59,7 @@ class testOfCSPHPXML extends UnitTestCase {
 					."<BR><h2>DERIVED:::</h2> ". htmlentities($this->gfObj->debug_print($builder->get_xml_string(),0,1)));
 				$this->assertEqual($builder->get_xml_string(), file_get_contents($testFile));
 			}
-			
+			#*/
 		}
 		
 	}//end test_pass_data_through_all_classes
@@ -67,18 +69,39 @@ class testOfCSPHPXML extends UnitTestCase {
 	
 	//-------------------------------------------------------------------------
 	function test_creator() {
-		$creator = new cs_phpxmlCreator('main');
-		$creator->create_path('config/settings');
-		$creator->set_tag_as_multiple('config/settings');
-		$creator->add_tag_multiple('config/settings', array('first'=>1,'second'=>2), array('note'=>'first settings block'));
-		$creator->add_tag_multiple('config/settings', array('another'=>1,'again'=>2));
 		
-		$this->gfObj->debug_print(__METHOD__ .": CREATED XML STRING::: ". htmlentities($creator->create_xml_string()) . $this->gfObj->debug_print($creator,0));
+		$creator = new cs_phpxmlCreator('main');
+		
+		//run some tests to make sure that paths are fixed properly.
+		$test2real = array(
+			'test/3/x/y/z/0'									=> '/MAIN/0/TEST/3/X/0/Y/0/Z/0',
+			'main/0/MyTest/x/Y/z'								=> '/MAIN/0/MYTEST/0/X/0/Y/0/Z/0',
+			'test/3/x/y/Z/0'									=> '/MAIN/0/TEST/3/X/0/Y/0/Z/0',
+			'this/is/a/very /long/paTH'							=> '/MAIN/0/THIS/0/IS/0/A/0/VERY/0/LONG/0/PATH/0',
+			'path/with/3/alpha-num3r1c/chars:in/it-good-test'	=> '/MAIN/0/PATH/0/WITH/3/ALPHA-NUM3R1C/0/CHARS:IN/0/IT-GOOD-TEST/0',
+			'path/with/same/word/in/it/twice:path/path'			=> '/MAIN/0/PATH/0/WITH/0/SAME/0/WORD/0/IN/0/IT/0/TWICE:PATH/0/PATH/0',
+			'tagwithnum0'										=> '/MAIN/0/TAGWITHNUM0/0'
+		);
+		foreach($test2real as $test=>$real) {
+			$this->assertEqual($creator->fix_path($test), $real);
+		}
+		
+		$creator->add_tag_multiple('config/settings', array('first'=>1,'second'=>2));
+		$creator->add_attribute('config/settings', array('note'=>'first settings block'));
+		$creator->add_tag_multiple('config/settings', array('another'=>1,'again'=>2));
+		$creator->add_attribute('config/settings/1', array('note'=>'second settings block'));
+		$creator->add_tag('config', 'will this override all that other stuff I did...');
+		$creator->add_tag('/main/config/0/settings/again', "There should now be TWO again tags at this level");
+		$creator->add_tag('/main/config/0/settings/1', "this should appear BELOW the zeroth index");
+		$creator->add_tag('/main/config/0/settings/blanktag', null);
+		$creator->add_tag('config/test', 'my test of cs_phpxmlBuilder');
+		
 		
 		$this->assertTrue(strlen($creator->create_xml_string()), "Zero-length XML string returned from creator");
-		$this->assertEqual($creator->create_xml_string(), file_get_contents(dirname(__FILE__) .'/files/testCreator1.xml'));
-		
-		
+		if(!$this->assertEqual($creator->create_xml_string(), file_get_contents(dirname(__FILE__) .'/files/testCreator1.xml'))) {
+			$this->gfObj->debug_print(__METHOD__ .": CREATED XML STRING::: ". htmlentities($creator->create_xml_string()) ."<hr>"
+				. $this->gfObj->debug_print(htmlentities(file_get_contents(dirname(__FILE__) .'/files/testCreator1.xml'))));
+		}
 		
 		
 	}//end test_creator()
@@ -92,13 +115,11 @@ class testOfCSPHPXML extends UnitTestCase {
 	function test_issue_267() {
 		$creator = new cs_phpxmlCreator('main');
 		
-		$creator->create_path('/main/data/value');
-		$creator->set_tag_as_multiple('/main/data/value');
-		$creator->add_tag('/main/data/value/0/data', 'data');
+		$creator->add_tag('/main/data/value/data/value', 'data');
 		$creator->add_tag('/main/data/value/1/extra');
-		$this->assertEqual($creator->create_xml_string(), file_get_contents(dirname(__FILE__) .'/files/issue267.xml'));
-		
-		$this->gfObj->debug_print(htmlentities($creator->create_xml_string()));
+		if(!$this->assertEqual($creator->create_xml_string(), file_get_contents(dirname(__FILE__) .'/files/issue267.xml'))) {
+			$this->gfObj->debug_print(htmlentities($creator->create_xml_string()));
+		}
 	}//end test_issue_267()
 	//-------------------------------------------------------------------------
 }

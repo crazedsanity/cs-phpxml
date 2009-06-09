@@ -145,7 +145,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		
 		$i = -1;
 		
-		$this->gf->debug_print(htmlentities($this->data));
 		return($this->get_children($vals, $i));
 	}//end get_tree()
 	//=================================================================================
@@ -395,28 +394,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	 * </main
 	 */
 	public function get_path_multiples() {
-//		if(!count($this->pathList) || !count($this->multiplesTest)) {
-//			$this->tree();
-//		}
-//		
-//		if(is_array($this->multiplesTest)) {
-//			$retval = array();
-//			foreach($this->multiplesTest as $path=>$count) {
-//				if(is_numeric($count)) {
-//					if($count > 1) {
-//						$retval[$path] = $count;
-//					}
-//				}
-//				else {
-//					throw new exception(__METHOD__ .": found non-numeric value in multiplesTest at path=(". $path ."), value=(". $count .")");
-//				}
-//			}
-//			$this->gf->debug_print($retval);
-//			exit;
-//		}
-//		else {
-//			throw new exception(__METHOD__ .": failed to find data for internal multiples test");
-//		}
 		
 		$retval = $this->pathMultiples;
 		
