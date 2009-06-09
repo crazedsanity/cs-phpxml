@@ -255,6 +255,9 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 					$this->pathList[$this->pathIndex] .= '/'. $vals[$i]['tag'];
 					
 					//add the path to possible multiples (any path with a count > 1 is a multiples path).
+					if(!isset($this->multiplesTest[$this->pathList[$this->pathIndex]])) {
+						$this->multiplesTest[$this->pathList[$this->pathIndex]] = 0;
+					}
 					$this->multiplesTest[$this->pathList[$this->pathIndex]]++;
 					
 					$myNumericPrefix = $this->multiplesTest[$this->pathList[$this->pathIndex]];
@@ -262,7 +265,13 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 					$this->pathIndex++;
 				}
 				else {
-					$this->pathList[$this->pathIndex] .= '/'. $vals[$i]['tag'];
+					if(isset($this->pathList[$this->pathIndex])) {
+						$this->pathList[$this->pathIndex] .= '/'. $vals[$i]['tag'];
+					}
+					else {
+						$this->pathList[$this->pathIndex] = '/'. $vals[$i]['tag'];
+					}
+					
 				}
 				
 				$tag = $this->build_tag($vals[$i], $vals, $i, $type);
@@ -271,6 +280,9 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 			}
 			elseif ($type === 'close') {
 				
+				if(!isset($this->multiplesTest[$this->pathList[$this->pathIndex]])) {
+					$this->multiplesTest[$this->pathList[$this->pathIndex]]=0;
+				}
 				$this->multiplesTest[$this->pathList[$this->pathIndex]]++;
 				// 'close:	End of node, return collected data
 				//		Do not increment $i or nodes disappear!
