@@ -3,10 +3,13 @@
 		<settings note="first settings block">
 			<first>1</first>
 			<second>2</second>
-		</settings>
-		<settings>
 			<another>1</another>
 			<again>2</again>
+			<again>There should now be TWO again tags at this level</again>
+			<blanktag />
 		</settings>
+		<settings note="second settings block">this should appear BELOW the zeroth index</settings>
+		<test>my test of cs_phpxmlBuilder</test>
 	</config>
+	<config>will this override all that other stuff I did...</config>
 </main>
