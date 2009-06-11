@@ -123,10 +123,12 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 				$path = preg_replace('/^\//', '', $path);
 			}
 			
-			//prepend root element as needed.
-			if(!preg_match('/^'. $this->rootElement .'/', $path)) {
-				$oldPath = $path;
-				$path = '/'. $this->rootElement .'/0/'. $path;
+			//prepend root element as needed (but only if available)
+			if(isset($this->rootElement)) {
+				if(!preg_match('/^'. $this->rootElement .'/', $path)) {
+					$oldPath = $path;
+					$path = '/'. $this->rootElement .'/0/'. $path;
+				}
 			}
 		}
 		else {
@@ -142,9 +144,6 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 				//$tagName => $tagIndex) {
 				$tagName = $myData[0];
 				$tagIndex = $myData[1];
-				#if(isset($this->pathMultiples[$newPath .'/'. $tagName])) {
-				#	$tagIndex = $this->pathMultiples[$newPath .'/'. $tagName];
-				#}
 				$newPath .= '/'. $tagName .'/'. $tagIndex;
 			}
 		}
@@ -175,7 +174,7 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 	 * 		[HEAVEN]	=> 0
 	 * );
 	 */
-	final public function create_tag2index($path) {
+	final public function create_tag2index($path, $useCurrentPathIndex=false) {
 		
 		if(strlen($path) && !is_numeric($path)) {
 			//final deal: let's add numbers to the path as required.
@@ -187,28 +186,39 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 			//In "ROOT/0/PATH/1/TO/0/HEAVEN/0", the non numerics are in 0, 2, 4, and 6
 			//	0=ROOT, 2=PATH, 4=TO, 6=HEAVEN [i.e. ROOT/PATH/TO/HEAVEN]
 			/*
+			 * NOTE:  the "MULTPATH" is where the pathMultiple would reside, indicating 
+			 * 			how it would determine what that tag's index would be.
 			 * FINAL ARRAY:::
 			 * 		$tag2Index = array (
 			 * 			0	=> array (
-			 * 					0	=> ROOT,
-			 * 					1	=> 0
+			 * 					0			=> ROOT,
+			 * 					1			=> 0,
+			 * 					[MULTPATH]	=> /ROOT
 			 * 				),
 			 * 			1	=> array (
-			 * 					0	=> PATH,
-			 * 					1	=> 1
+			 * 					0			=> PATH,
+			 * 					1			=> 1,
+			 * 					[MULTPATH]	=> /ROOT/0/PATH
 			 * 				),
 			 * 			2	=> array (
-			 * 					0	=> TO,
-			 * 					1	=> 0
+			 * 					0			=> TO,
+			 * 					1			=> 0,
+			 * 					[MULTPATH]	=> /ROOT/0/PATH/1/TO
 			 * 				),
 			 * 			3	=> array (
-			 * 					0	=> HEAVEN,
-			 * 					1	=> 0
+			 * 					0			=> HEAVEN,
+			 * 					1			=> 0,
+			 * 					[MULTPATH]	=> /ROOT/0/PATH/1/TO/0/HEAVEN
 			 * 				)
 			 * 		);
+			 * 
 			 */
+			
 			$lastIndexNumeric=false;
 			//foreach($bits as $i=>$tagOrIndex) {
+			$curPath = "";
+			$latestPath = "";
+			$debug=" ---- [". __METHOD__ ."] MOST RECENT PATH DEBUG INFO ----\n";
 			for($i=0; $i<count($bits); $i++) {
 				if(isset($bits[$i]) && (!is_numeric($bits[$i]) || preg_match('/^[A-Z]/', $bits[$i]))) {
 					
@@ -227,15 +237,43 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 						$lastIndexNumeric=true;
 						$i++;
 					}
+					$curPath .= '/'. $tagOrIndex;
+					
+					if($useCurrentPathIndex === true) {
+						//$latestPath = $curPath .'/'. $this->get_path_multiple($curPath);
+						//$debug .= "curPath=(". $curPath ."), latestPath=(". $latestPath .")\n";
+						
+						//if there are multiple paths that START with this path, increment the index.
+						$derivedIndex = 0;
+						foreach($this->paths as $p=>$v) {
+							$matchThis = preg_replace('/\//', '\\\/', $curPath);
+							if(preg_match('/^'. $matchThis .'/', $p)) {
+								$derivedIndex++;
+							}
+						}
+						$myPathIndex = $derivedIndex;
+					}
+					
 					$retval[] = array(
-						0	=> $tagOrIndex,
-						1	=> $myPathIndex
+						0			=> $tagOrIndex,
+						1			=> $myPathIndex,
+						'MULTPATH'	=> $curPath
 					);
+					$curPath .= '/'. $myPathIndex;
 				}
 				else {
 					throw new exception(__METHOD__ .": while walking path, attempted to access invalid "
 						."index (". $i .") [starting at zero] or found invalid location of numeric "
 						."(". $bits[$i] .")");
+				}
+			}
+			if($useCurrentPathIndex) {
+				$this->gf->debug_print(__METHOD__ .": curPath=(". $curPath ."), latest=(". $latestPath .")");
+				if($latestPath == '/MAIN/0/MULTIPLE/0/ITEM/0/AGAIN/0/TEST/0') {
+					$this->gf->debug_print($this->pathMultiples);
+					$this->gf->debug_print($debug);
+					$this->gf->debug_print($retval);
+					#exit;
 				}
 			}
 		}
@@ -302,5 +340,106 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 	//=================================================================================
 	
 	
+	
+	//=================================================================================
+	/**
+	 * Build internal "pathMultiples" list with indexes for parents of the given tag; 
+	 * does NOT update any existing values.
+	 */
+	protected function build_parent_path_multiples($path) {
+		$tag2Index = $this->create_tag2index($path);
+		
+		//since we're only verifying/building parent multiples, drop the last tag.
+		array_pop($tag2Index);
+		
+		$retval = 0;
+		if(is_array($tag2Index)) {
+			$myPath = "";
+			foreach($tag2Index as $i=>$myData) {
+				$curTag = $myData[0];
+				$index = $myData[1];
+				$myPath .= '/'. $curTag .'/'. $index;
+				
+				if(!isset($this->pathMultiples[$myPath])) {
+					//$this->pathMultiples[$myPath] = 0;
+					$this->update_path_multiple($myPath,true);
+					$retval++;
+				}
+			}
+		}
+		
+		return($retval);
+	}//end build_parent_path_multiples()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	protected function update_path_multiple($path, $justInitializeIt=false) {
+		$path = $this->fix_path($path);
+		$pathBits = $this->explode_path($path);
+		
+		$lastBit = array_pop($pathBits);
+		if(is_numeric($lastBit)) {
+			$index = $this->path_from_array($pathBits);
+			$altIndex = $this->reconstruct_path($this->create_tag2index($path));
+			$this->gf->debug_print(__METHOD__ .": index=(". $index ."), altIndex=(". $altIndex .")");
+			if(preg_match('/\/[0-9]$/', $index)) {
+				throw new exception(__METHOD__ .": invalid index (". $index .") from path=(". $path .") -- ORIGINAL=(". func_get_arg(0) .")");
+			}
+			
+			if(!preg_match('/^\//', $index)) {
+				throw new exception(__METHOD__ .": path_from_array() failed to create proper string...!!!");
+			}
+			
+			if(isset($this->pathMultiples[$index])) {
+				if($justInitializeIt === false) {
+					$this->pathMultiples[$index]++;
+				}
+			}
+			else {
+				$this->pathMultiples[$index]=0;
+			}
+			$retval = $index .'/'. $this->pathMultiples[$index];
+		}
+		else {
+			throw new exception(__METHOD__ .": invalid lastBit on path (". $path .")");
+		}
+		
+		return($retval);
+		
+	}//end update_path_multiple()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	public function get_path_multiple($path) {
+		$path = $this->fix_path($path);
+		
+		//derive it.
+		$derivedIndex = 0;
+		$pathBits = $this->create_tag2index($path);
+		$lastBit = array_pop($pathBits);
+		$findThis = preg_replace('/\//', '\\\/', $lastBit['MULTPATH']);
+		foreach($this->paths as $p=>$v) {
+			if(preg_match('/^'. $findThis .'/', $p)) {
+				$derivedIndex++;
+			}
+		}
+		
+		if(isset($this->pathMultiples[$path])) {
+			$retval = $this->pathMultiples[$path];
+		}
+		else {
+			//throw new exception(__METHOD__ .": invalid path (". $path .")");
+			$retval = 0;
+		}
+		
+		$this->gf->debug_print(__METHOD__ .": arg0=(". func_get_arg(0) ."), new path=(". $path ."), retval=(". $retval ."), derived=(". $derivedIndex .")");
+		
+		return($retval);
+	}//end get_path_multiple()
+	//=================================================================================
 }
 ?>

@@ -82,10 +82,9 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	private $makeSimpleTree = FALSE;
 	
 	private $pathIndex=0;
-	private $pathList = array();
-	
-	private $multiplesTest=array();
-	private $pathMultiples=array();
+	protected $pathList = array();
+	protected $pathMultiples=array();
+	protected $paths = array();
 	private $curPath=null;
 	
 	//=================================================================================
@@ -145,7 +144,13 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		
 		$i = -1;
 		
-		return($this->get_children($vals, $i));
+		$retval = $this->get_children($vals, $i);
+		
+		//drop the last item in the pathList if it is empty.
+		if(!strlen($this->pathList[(count($this->pathList) -1)])) {
+			unset($this->pathList[(count($this->pathList) -1)]);
+		}
+		return($retval);
 	}//end get_tree()
 	//=================================================================================
 	
@@ -177,11 +182,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 			$matches = 0;
 			$matchPath = $this->curPath;
 			$path = $matchPath . $thisvals['tag'];
-			foreach($this->multiplesTest as $p=>$v) {
-				if(preg_match('/^'.  preg_replace('/\//', '\\\/', $matchPath) .'/', $p)) {
-					$path = $path .'/'. $v;
-				}
-			}
 		}
 		else {
 			// open tag, recurse
@@ -221,12 +221,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 			$this->curPath = $this->pathList[$this->pathIndex];
 		}
 			
-			//do some magical changes here...
-//			if($this->multiplesTest[$this->pathList[$this->pathIndex]] > 1) {
-//				$this->gf->debug_print(__METHOD__ .": Multiples Test SO FAR::: ". $this->gf->debug_print($this->multiplesTest,0,1));
-//				exit;
-//			}
-		
 		// Loop through children, until hit close tag or run out of tags
 		while (++$i < count($vals)) {
 			$type = $vals[$i]['type'];
@@ -243,35 +237,26 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 					 * 	/MAIN/MULTIPLE/0/ITEM/0
 					 * 	/MAIN/MULTIPLE/0/ITEM/1
 					 * 	/MAIN/MULTIPLE/0/ITEM/2
-					 * 	/MAIN/MULTIPLE/0/ITEM/3/AGAIN/0/TEST
-					 * 	/MAIN/MULTIPLE/0/ITEM/3/AGAIN
+					 * 	/MAIN/MULTIPLE/0/ITEM/3/AGAIN/0/TEST/0
+					 * 	/MAIN/MULTIPLE/0/ITEM/3/AGAIN/0
 					 * 	/MAIN/MULTIPLE/0/ITEM/4
-					 * 	/MAIN/MULTIPLE/1/ONE
-					 * 	/MAIN/MULTIPLE/1/TWO
-					 * 	/MAIN/MULTIPLE/1/THREE
+					 * 	/MAIN/MULTIPLE/1/ONE/0
+					 * 	/MAIN/MULTIPLE/1/TWO/0
+					 * 	/MAIN/MULTIPLE/1/THREE/0
 					 */
-					$newPathIndex = ($this->pathIndex +1);
-					$this->pathList[$newPathIndex] = $this->pathList[$this->pathIndex];
-					$this->pathList[$this->pathIndex] .= '/'. $vals[$i]['tag'];
+					$this->update_pathlist($this->pathList[$this->pathIndex], null, false);
 					
-					//add the path to possible multiples (any path with a count > 1 is a multiples path).
-					if(!isset($this->multiplesTest[$this->pathList[$this->pathIndex]])) {
-						$this->multiplesTest[$this->pathList[$this->pathIndex]] = 0;
-					}
-					$this->multiplesTest[$this->pathList[$this->pathIndex]]++;
-					
-					$myNumericPrefix = $this->multiplesTest[$this->pathList[$this->pathIndex]];
+					$this->update_pathlist($this->pathList[$this->pathIndex] .'/'. $vals[$i]['tag'], $this->pathIndex, false);
 					
 					$this->pathIndex++;
 				}
 				else {
 					if(isset($this->pathList[$this->pathIndex])) {
-						$this->pathList[$this->pathIndex] .= '/'. $vals[$i]['tag'];
+						$this->update_pathlist($this->pathList[$this->pathIndex] .'/'. $vals[$i]['tag'], $this->pathIndex);
 					}
 					else {
-						$this->pathList[$this->pathIndex] = '/'. $vals[$i]['tag'];
+						$this->update_pathlist('/'. $vals[$i]['tag'], $this->pathIndex);
 					}
-					
 				}
 				
 				$tag = $this->build_tag($vals[$i], $vals, $i, $type);
@@ -280,15 +265,11 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 			}
 			elseif ($type === 'close') {
 				
-				if(!isset($this->multiplesTest[$this->pathList[$this->pathIndex]])) {
-					$this->multiplesTest[$this->pathList[$this->pathIndex]]=0;
-				}
-				$this->multiplesTest[$this->pathList[$this->pathIndex]]++;
 				// 'close:	End of node, return collected data
 				//		Do not increment $i or nodes disappear!
 				$bits = $this->explode_path($this->pathList[$this->pathIndex]);
 				array_pop($bits);
-				$this->pathList[$this->pathIndex] = $this->path_from_array($bits);
+				$this->update_pathlist($this->path_from_array($bits), $this->pathIndex, true);
 				break;
 			}
 			else {
@@ -300,9 +281,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		foreach($children as $key => $value) {
 			if (is_array($value) && (count($value) == 1)) {
 				$children[$key] = $value[0];
-			}
-			else {
-				#$this->gf->debug_print(__METHOD__ .": found numeric list at (". $this->pathList[($this->pathIndex -1)] ." - ". $this->pathIndex .")::: ". $this->gf->debug_print($children,0,1));
 			}
 		}
 		return $children;
@@ -383,34 +361,48 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	
 	
 	//=================================================================================
-	/** Returns a list of paths (path=>count) indicating where a tag is written multiple
-	 * times.  In the following example, "testone" and "test3" are both "multiples":::
-	 * 
-	 * <main>
-	 * 	<testone>
-	 * 		<x>y</x>
-	 * 	</testone>
-	 * 	<testone>
-	 * 		<y>z</y>
-	 * 	</testone>
-	 * 	<test2>
-	 * 		<x />
-	 * 		<y>y</y>
-	 * 	</test2>
-	 * 	<test3>
-	 * 		<see />
-	 * 	</test3>
-	 * 	<test3>
-	 * 		<now />
-	 * 	</test3>
-	 * </main
-	 */
-	public function get_path_multiples() {
-		
-		$retval = $this->pathMultiples;
-		
-		return($retval);
-	}//end get_path_multiples()
+	public function get_pathlist() {
+		if(is_array($this->pathList)) {
+			$myPathList = array();
+			
+			//loop through the path list and create a full VALID path list for something 
+			//	like cs_phpxmlCreator{} to use (denotes path multiples).
+			
+			$this->gf->debug_print($this->pathList);
+			foreach($this->pathList as $i=>$p) {
+				$this->gf->debug_print($this->create_tag2index($p,true));
+//				$this->build_parent_path_multiples($p);
+//				$this->update_path_multiple($p);
+//				$myPathList[] = $this->fix_path($p,true);
+			}
+			$this->gf->debug_print(__METHOD__ .": paths:::: ". $this->gf->debug_print($this->pathList,0));
+		}
+		else {
+			throw new exception(__METHOD__ .": no paths for creating list");
+		}
+		return($myPathList);
+	}//end get_pathlist()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	public function get_pathindex() {
+		return($this->pathIndex);
+	}//end get_pathindex()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	private function update_pathlist($path, $pathIndex=null) {
+		if(is_numeric($pathIndex)) {
+			$this->pathList[$pathIndex] = $path;
+		}
+		else {
+			$this->pathList[] = $path;
+		}
+	}//end update_pathlist()
 	//=================================================================================
 }
 

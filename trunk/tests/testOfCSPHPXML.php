@@ -31,15 +31,22 @@ class testOfCSPHPXML extends UnitTestCase {
 		
 		$testFiles = array(
 			dirname(__FILE__) .'/files/test1.xml',
-			dirname(__FILE__) .'/files/test2.xml',
-			dirname(__FILE__) .'/files/test3.xml'
+			#dirname(__FILE__) .'/files/test2.xml',
+			#dirname(__FILE__) .'/files/test3.xml'
 		);
 		
 		foreach($testFiles as $testFile) {
+			$this->gfObj->debug_print(htmlentities(file_get_contents($testFile)));
+			$parser->gf->debugPrintOpt = 1;
 			//first, put it into cs-phpxmlParser.
 			$parser = new cs_phpxmlParser(file_get_contents($testFile));
+			$parser->get_tree();
+			$this->gfObj->debug_print($parser->get_pathlist());
+			exit(__METHOD__ ." -- ". __LINE__);
+			#$this->gfObj->debug_print($parser->get_pathindex());
+			#$this->gfObj->debug_print($parser->get_path_multiples());
 			
-			#/*
+			/*
 			//now move it into the creator.
 			$creator = new cs_phpxmlCreator($parser->get_root_element());
 			$creator->load_xmlparser_data($parser);
