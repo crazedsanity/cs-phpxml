@@ -432,7 +432,7 @@ class cs_arrayToPath extends cs_versionAbstract {
 				}
 				
 				$i++;
-				if($i >= 100) {
+				if($i >= 5000) {
 					exit(__METHOD__ .": too many loops");
 				}
 			}
