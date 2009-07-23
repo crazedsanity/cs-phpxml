@@ -73,25 +73,23 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
  * TODO: implement something to take array like this class returns & put it in XML form.
  */
 
-	private $data;			// Input XML data buffer
-	private $vals;			// Struct created by xml_parse_into_struct
+	var $data;			// Input XML data buffer
+	var $vals;			// Struct created by xml_parse_into_struct
+	var $collapse_dups;	// If there is only one tag of a given name,
+						//   shall we store as scalar or array?
+	var $index_numeric;	// Index tags by numeric position, not name.
+						//   useful for ordered XML like CallXML.
 	private $xmlTags;
 	private $xmlIndex;
 	private $levelArr;
 	private $childTagDepth = 0;
 	private $makeSimpleTree = FALSE;
 	
-	private $pathIndex=0;
-	protected $pathList = array();
-	protected $pathMultiples=array();
-	protected $paths = array();
-	private $curPath=null;
-	
 	//=================================================================================
 	/**
 	 * CONSTRUCTOR: Read in XML on object creation, via raw data (string), stream, filename, or URL.
 	 */
-	function __construct($data_source, $data_source_type='raw') {
+	function __construct($data_source, $data_source_type='raw', $collapse_dups=1, $index_numeric=0) {
 		parent::__construct(array());
 		if($data_source === 'unit_test') {
 			//this is only a test... don't do anything.
@@ -99,6 +97,8 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		}
 		else {
 			$this->get_version();
+			$this->collapse_dups = $collapse_dups;
+			$this->index_numeric = $index_numeric;
 			$this->data = '';
 			if($data_source_type == 'raw') {
 				$this->data = $data_source;
@@ -119,8 +119,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 				throw new exception(__METHOD__ .": FATAL: unable to find resource");
 			}
 		}
-		
-		$this->gf = new cs_globalFunctions;
 	}//end __construct()
 	//=================================================================================
 	
@@ -143,14 +141,7 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		xml_parser_free($parser);
 		
 		$i = -1;
-		
-		$retval = $this->get_children($vals, $i);
-		
-		//drop the last item in the pathList if it is empty.
-		if(!strlen($this->pathList[(count($this->pathList) -1)])) {
-			unset($this->pathList[(count($this->pathList) -1)]);
-		}
-		return($retval);
+		return($this->get_children($vals, $i));
 	}//end get_tree()
 	//=================================================================================
 	
@@ -164,7 +155,7 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		
 		$tag = array();
 		$tag['type'] = $type;
-		
+
 		if($type === 'complete') {
 			// complete tag, just return it for storage in array.
 			if($this->makeSimpleTree) {
@@ -178,10 +169,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 					$tag['value'] = $thisvals['value'];
 				}
 			}
-			
-			$matches = 0;
-			$matchPath = $this->curPath;
-			$path = $matchPath . $thisvals['tag'];
 		}
 		else {
 			// open tag, recurse
@@ -211,76 +198,48 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	private function get_children($vals, &$i) {
 		$children = array();     // Contains node data
 		
-		if($i == -1) {
-			$this->pathIndex=0;
-			$this->pathList=array();
+		if ($i > -1 && isset($vals[$i]['value'])) {
+			//Node has CDATA before it's children.
+			$children['VALUE'] = $vals[$i]['value'];
 		}
-		
-		$this->curPath = null;
-		if(isset($this->pathList[$this->pathIndex])) {
-			$this->curPath = $this->pathList[$this->pathIndex];
-		}
-			
+
 		// Loop through children, until hit close tag or run out of tags
 		while (++$i < count($vals)) {
 			$type = $vals[$i]['type'];
 			
+			/* TODO: find something that causes this instance to fire-off, so I can tell WTF it should do.
+			if ($type === 'cdata')
+			{
+				//TODO: find somewhere that causes this instance to fire off, so we can 
+				// 'cdata':	Node has CDATA after one of it's children
+				// 		(Add to cdata found before in this case)
+				$children['VALUE'] .= $vals[$i]['value'];
+			}
+			else#*/
 			if($type === 'complete' || $type === 'open') {
 				// 'complete':	At end of current branch
 				// 'open':	Node has children, recurse
-				
-				if($type == 'complete') {
-					
-					//TODO: If a new path is along an existing path, expand it out to include all sub-paths...
-					/*
-					 * EXAMPLE (from unit testing, see tests/files/test1.xml):
-					 * 	/MAIN/MULTIPLE/0/ITEM/0
-					 * 	/MAIN/MULTIPLE/0/ITEM/1
-					 * 	/MAIN/MULTIPLE/0/ITEM/2
-					 * 	/MAIN/MULTIPLE/0/ITEM/3/AGAIN/0/TEST/0
-					 * 	/MAIN/MULTIPLE/0/ITEM/3/AGAIN/0
-					 * 	/MAIN/MULTIPLE/0/ITEM/4
-					 * 	/MAIN/MULTIPLE/1/ONE/0
-					 * 	/MAIN/MULTIPLE/1/TWO/0
-					 * 	/MAIN/MULTIPLE/1/THREE/0
-					 */
-					$this->update_pathlist($this->pathList[$this->pathIndex], null, false);
-					
-					$this->update_pathlist($this->pathList[$this->pathIndex] .'/'. $vals[$i]['tag'], $this->pathIndex, false);
-					
-					$this->pathIndex++;
+				$tag = $this->build_tag($vals[$i], $vals, $i, $type);
+				if ($this->index_numeric) {
+					$tag['TAG'] = $vals[$i]['tag'];
+					$children[] = $tag;
 				}
 				else {
-					if(isset($this->pathList[$this->pathIndex])) {
-						$this->update_pathlist($this->pathList[$this->pathIndex] .'/'. $vals[$i]['tag'], $this->pathIndex);
-					}
-					else {
-						$this->update_pathlist('/'. $vals[$i]['tag'], $this->pathIndex);
-					}
+					$children[$vals[$i]['tag']][] = $tag;
 				}
-				
-				$tag = $this->build_tag($vals[$i], $vals, $i, $type);
-				
-				$children[$vals[$i]['tag']][] = $tag;
 			}
 			elseif ($type === 'close') {
-				
 				// 'close:	End of node, return collected data
 				//		Do not increment $i or nodes disappear!
-				$bits = $this->explode_path($this->pathList[$this->pathIndex]);
-				array_pop($bits);
-				$this->update_pathlist($this->path_from_array($bits), $this->pathIndex, true);
 				break;
-			}
-			else {
-				throw new exception(__METHOD__ .": found invalid type (". $type .")");
 			}
 		} 
 		
-		
-		foreach($children as $key => $value) {
-			if (is_array($value) && (count($value) == 1)) {
-				$children[$key] = $value[0];
+		if ($this->collapse_dups) {
+			foreach($children as $key => $value) {
+				if (is_array($value) && (count($value) == 1)) {
+					$children[$key] = $value[0];
+				}
 			}
 		}
 		return $children;
@@ -347,62 +306,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		return($retval);
 		
 	}//end get_attribute()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	public function update_a2p(cs_arrayToPath &$a2p) {
-		$a2p->reload_data($this->a2p->get_data());
-		return($a2p);
-	}//end update_a2p()	
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	public function get_pathlist() {
-		if(is_array($this->pathList)) {
-			$myPathList = array();
-			
-			//loop through the path list and create a full VALID path list for something 
-			//	like cs_phpxmlCreator{} to use (denotes path multiples).
-			
-			$this->gf->debug_print($this->pathList);
-			foreach($this->pathList as $i=>$p) {
-				$this->gf->debug_print($this->create_tag2index($p,true));
-//				$this->build_parent_path_multiples($p);
-//				$this->update_path_multiple($p);
-//				$myPathList[] = $this->fix_path($p,true);
-			}
-			$this->gf->debug_print(__METHOD__ .": paths:::: ". $this->gf->debug_print($this->pathList,0));
-		}
-		else {
-			throw new exception(__METHOD__ .": no paths for creating list");
-		}
-		return($myPathList);
-	}//end get_pathlist()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	public function get_pathindex() {
-		return($this->pathIndex);
-	}//end get_pathindex()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	private function update_pathlist($path, $pathIndex=null) {
-		if(is_numeric($pathIndex)) {
-			$this->pathList[$pathIndex] = $path;
-		}
-		else {
-			$this->pathList[] = $path;
-		}
-	}//end update_pathlist()
 	//=================================================================================
 }
 
