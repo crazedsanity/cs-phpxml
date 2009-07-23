@@ -1,0 +1,20 @@
+<methodcall>
+	<methodname>blogger.getUsersBlogs</methodname>
+	<params>
+		<param>
+			<value>
+				<string/>
+			</value>
+		</param>
+		<param>
+			<value>
+				<string>slaughter</string>
+			</value>
+		</param>
+		<param>
+			<value>
+				<string>param2</string>
+			</value>
+		</param>
+	</params>
+</methodcall>

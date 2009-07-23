@@ -1,0 +1,23 @@
+<main>
+	<test>
+		<of>
+			<issue_num_267 atrib1="test" atrib2="issue" atrib3="267">
+				<value>
+					<testing>
+						<deeper_test>
+							<look/>
+							<at/>
+							<me/>
+						</deeper_test>
+					</testing>
+				</value>
+				<attributes>
+					<atrib1>BROKEN</atrib1>
+					<attrib2>BROKEN</attrib2>
+					<attrib3>BROKEN</attrib3>
+					<testattrib>anotherBroken</testattrib>
+				</attributes>
+			</issue_num_267>
+		</of>
+	</test>
+</main>
