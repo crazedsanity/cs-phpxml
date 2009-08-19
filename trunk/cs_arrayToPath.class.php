@@ -33,9 +33,9 @@
  */ 	
 
 
-require_once(dirname(__FILE__) .'/../cs-versionparse/cs_version.abstract.class.php');
+require_once(dirname(__FILE__) ."/cs_phpxml.abstract.class.php");
 
-class cs_arrayToPath extends cs_versionAbstract {
+class cs_arrayToPath extends cs_phpxmlAbstract {
 	
 	private $prefix		= NULL;	//the first directory to use.
 	private $data;
