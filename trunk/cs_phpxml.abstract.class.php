@@ -13,7 +13,7 @@
  */
 
 require_once(dirname(__FILE__) .'/cs_arrayToPath.class.php');
-require_once(dirname(__FILE__) .'/../cs-webapplibs/cs_version.abstract.class.php');
+require_once(dirname(__FILE__) .'/../cs-content/abstract/cs_version.abstract.class.php');
 
 abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 	
