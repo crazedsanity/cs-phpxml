@@ -165,6 +165,8 @@ class testOfCSPHPXML extends UnitTestCase {
 			$this->assertTrue($creator->verify_path('/methodResponse/params/param/value/struct'));
 			$this->assertTrue($creator->verify_path('/methodResponse/params/param/value'));
 			$this->assertTrue($creator->verify_path('/methodResponse/params/param/value/struct/member'));
+			$this->assertTrue($creator->verify_path('/methodResponse/params/param/Value/struct/member'));
+			$this->assertTrue($creator->verify_path('/methodResponse/params/param/vALUE/struct/member'));
 			
 			$this->assertEqual('stuff', $creator->get_data('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER/value'));
 			$this->assertNotEqual('stuff', $creator->get_data('/methodResponse/params/param/value/struct/member/value'));

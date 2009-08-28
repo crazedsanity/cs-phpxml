@@ -280,19 +280,24 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 				$newTagName = strtoupper($tagName);
 			}
 			else {
-				if($index == $lastIndex && $tagName == 'value') {
+				if(strtolower($tagName) == 'value' && $index == $lastIndex) {
 					//FIX ISSUE #267: handle "value" in the path properly.
 					$checkUpperPath = $this->a2p->get_data($this->reconstruct_path($newPathArr) .'/VALUE');
 					$checkLowerPath = $this->a2p->get_data($this->reconstruct_path($newPathArr) .'/value');
 					if(is_array($checkUpperPath) && is_array($checkLowerPath)) {
 						//there's two paths... uh... just let them use the one they requested.
-						$newTagName = $tagName;
+						if(preg_match('/^V/', $tagName)) {
+							$newTagName = strtoupper($tagName);
+						}
+						else {
+							$newTagName = strtolower($tagName);
+						}
 					}
 					elseif(is_array($checkLowerPath)) {
-						$newTagName = 'value';
+						$newTagName = strtolower($tagName);
 					}
 					else {
-						$newTagNaem = 'VALUE';
+						$newTagName = strtoupper($tagName);
 					}
 				}
 				else {
