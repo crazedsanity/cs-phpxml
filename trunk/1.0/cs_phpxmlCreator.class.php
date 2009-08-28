@@ -53,8 +53,6 @@
  * (forthcoming)
  */
 
-require_once(dirname(__FILE__) ."/cs_phpxml.abstract.class.php");
-require_once(dirname(__FILE__) ."/cs_phpxmlBuilder.class.php");
 
 class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	private $xmlArray;

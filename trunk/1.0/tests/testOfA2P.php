@@ -11,7 +11,6 @@
  * $LastChangedRevision$
  */
 
-require_once(dirname(__FILE__) .'/../cs_arrayToPath.class.php');
 
 class testOfA2P extends UnitTestCase {
 	

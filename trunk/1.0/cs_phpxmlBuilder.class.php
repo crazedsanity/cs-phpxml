@@ -10,7 +10,6 @@
  * Last Updated:::::::: $Date$
  * 
  */
-require_once(dirname(__FILE__) ."/cs_phpxml.abstract.class.php");
 
 	
 class cs_phpxmlBuilder extends cs_phpxmlAbstract {

@@ -33,7 +33,6 @@
  */ 	
 
 
-require_once(dirname(__FILE__) ."/cs_phpxml.abstract.class.php");
 
 class cs_arrayToPath extends cs_phpxmlAbstract {
 	

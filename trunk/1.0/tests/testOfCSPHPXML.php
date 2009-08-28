@@ -11,9 +11,6 @@
  * $LastChangedRevision$
  */
 
-require_once(dirname(__FILE__) .'/../cs_phpxmlBuilder.class.php');
-require_once(dirname(__FILE__) .'/../cs_phpxmlCreator.class.php');
-require_once(dirname(__FILE__) .'/../cs_phpxmlParser.class.php');
 
 class testOfCSPHPXML extends UnitTestCase {
 	
