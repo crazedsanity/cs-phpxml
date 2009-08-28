@@ -263,7 +263,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	//=================================================================================
 	/**
 	 * Break the path into bits, and fix the case of each tag to UPPER, except for any
-	 * reserved words.
+	 * reserved words (with exceptions)
 	 */
 	private function fix_path($path) {
 		
@@ -272,9 +272,34 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 		
 		//fix each tag's case.
 		$newPathArr = array();
+		$lastIndex = (count($pathArr) -1);
 		foreach($pathArr as $index=>$tagName) {
+			$newTagName = null;
 			//fix each tag in the path.
-			$newPathArr[] = $this->fix_tagname($tagName);
+			if(strtolower($tagName) == 'value' && $index != $lastIndex) {
+				$newTagName = strtoupper($tagName);
+			}
+			else {
+				if($index == $lastIndex && $tagName == 'value') {
+					//FIX ISSUE #267: handle "value" in the path properly.
+					$checkUpperPath = $this->a2p->get_data($this->reconstruct_path($newPathArr) .'/VALUE');
+					$checkLowerPath = $this->a2p->get_data($this->reconstruct_path($newPathArr) .'/value');
+					if(is_array($checkUpperPath) && is_array($checkLowerPath)) {
+						//there's two paths... uh... just let them use the one they requested.
+						$newTagName = $tagName;
+					}
+					elseif(is_array($checkLowerPath)) {
+						$newTagName = 'value';
+					}
+					else {
+						$newTagNaem = 'VALUE';
+					}
+				}
+				else {
+					$newTagName = $this->fix_tagname($tagName);
+				}
+			}
+			$newPathArr[$index] = $newTagName;
 		}
 		
 		//check if the first element is our root element: if not, add it.

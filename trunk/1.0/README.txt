@@ -39,6 +39,8 @@ REMEMBER:
  1.) there can be ONLY ONE root element (the first index, "ROOT_ELEMENT").
  
  2.) the parser converts tags into UPPERCASE: lowercase indexes are special (attributes, type, value)
+ 	a.) if an intermediate portion of the path is "value" (case insensitive), it is left as UPPERCASE
+ 	b.) if the last part of the path is "value" (case insensitive), it is converted to lowercase only if that path exists.
  
  3.) arrayToPath{} addresses arrays using paths, much like a unix filesystem.  In the array below, the tag with a value
  of "AA Rechargeable Battery Pack" may be addressed as "/ROOT_ELEMENT/SHOPPING-CART/ITEMS/ITEM/0/ITEM-NAME".
@@ -46,6 +48,8 @@ REMEMBER:
  4.) when a tag is listed multiple times within the same parent tag, it is represented as a numerically-indexed array
  beneath the duplicated tag name: this parent tag will NOT have a "type" index.  For an example, see 
  /ROOT_ELEMENT/SHOPPING-CART/ITEMS/ITEM in the array below.
+ 
+ 5.) Attribute names are left in whatever case they were in, not converted to upper or lower like others!
  
 
 FORMAT OF ARRAYS:::
@@ -90,6 +94,7 @@ Array
                                                     [attributes] => Array
                                                         (
                                                             [CURRENCY] => USD
+                                                            [testValue] => this is just a Test.
                                                         )
 
                                                     [value] => 12.00
