@@ -1,0 +1,13 @@
+<main>
+	<tagone>
+		<value>location of this TAG is /MAIN/TAGONE/VALUE</value>
+	</tagone>
+	<tagtwo value="this is the attribute of /MAIN/TAGTWO/attributes/VALUE"/>
+	<data>
+		<value>
+			<data>
+				<value>data</value>
+			</data>
+		</value>
+	</data>
+</main>
