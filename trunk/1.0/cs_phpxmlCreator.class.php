@@ -424,7 +424,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 					$pathOk = $this->a2p->get_data($currentPath);
 					
 					$tagPath = $this->create_list($currentPath, $tagName, '/');
-					if(!strlen($pathOk[$tagName]['type']) && !isset($this->numericPaths[$tagPath])) {
+					if(!@strlen($pathOk[$tagName]['type']) && !isset($this->numericPaths[$tagPath])) {
 						//update the current path as needed.
 						$this->add_tag($tagPath);
 					}

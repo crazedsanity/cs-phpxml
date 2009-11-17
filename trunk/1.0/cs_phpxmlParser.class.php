@@ -157,7 +157,7 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		if($type === 'complete') {
 			// complete tag, just return it for storage in array.
 			if($this->makeSimpleTree) {
-				$tag = $thisvals['value'];
+				@$tag = $thisvals['value'];
 			}
 			else {
 				if(isset($thisvals['attributes'])) {
