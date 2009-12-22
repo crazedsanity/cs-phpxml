@@ -77,17 +77,16 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 						//   shall we store as scalar or array?
 	var $index_numeric;	// Index tags by numeric position, not name.
 						//   useful for ordered XML like CallXML.
-	private $xmlTags;
-	private $xmlIndex;
-	private $levelArr;
 	private $childTagDepth = 0;
 	private $makeSimpleTree = FALSE;
+	private $xmlPaths = array();
+	private $preserveCase=false;
 	
 	//=================================================================================
 	/**
 	 * CONSTRUCTOR: Read in XML on object creation, via raw data (string), stream, filename, or URL.
 	 */
-	function __construct($data_source, $data_source_type='raw', $collapse_dups=1, $index_numeric=0) {
+	function __construct($data_source, $data_source_type='raw', $preserveCase=false) {
 		parent::__construct(array());
 		if($data_source === 'unit_test') {
 			//this is only a test... don't do anything.
@@ -95,8 +94,11 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		}
 		else {
 			$this->get_version();
-			$this->collapse_dups = $collapse_dups;
-			$this->index_numeric = $index_numeric;
+			$this->collapse_dups = 1;
+			$this->index_numeric = 0;
+			if(is_bool($preserveCase)) {
+				$this->preserveCase=$preserveCase;
+			}
 			$this->data = '';
 			if($data_source_type == 'raw') {
 				$this->data = $data_source;
@@ -131,6 +133,11 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		$this->makeSimpleTree = $simpleTree;
 		$parser = xml_parser_create('ISO-8859-1');
 		xml_parser_set_option($parser, XML_OPTION_SKIP_WHITE, 1);
+		
+		//Set an option to NOT uppercase all the tags (case sensitivity is preserved)
+		if($this->preserveCase === true) {
+			xml_parser_set_option($parser, XML_OPTION_CASE_FOLDING, 0);
+		}
 		
 		//initialize some variables, before dropping them into xml_parse_into_struct().
 		$vals = array();
@@ -278,7 +285,9 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		$retval = NULL;
 		if(!is_null($path)) {
 			$path = preg_replace('/\/$/', '', $path);
-			$path = strtoupper($path);
+			if(!$this->preserveCase) {
+				$path = strtoupper($path);
+			}
 			$path = $path . '/value';
 			
 			$retval = $this->get_path($path);
@@ -295,8 +304,11 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		$retval = NULL;
 		if(!is_null($path)) {
 			$path = preg_replace('/\/$/', '', $path);
-			$path = strtoupper($path);
-			$path = $path . '/attributes/'. strtoupper($attributeName);
+			if(!$this->preserveCase) {
+				$path = strtoupper($path);
+				$attributeName = strtoupper($attributeName);
+			}
+			$path = $path . '/attributes/'. $attributeName;
 			
 			$retval = $this->get_path($path);
 		}
