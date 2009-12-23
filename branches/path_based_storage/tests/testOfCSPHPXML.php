@@ -189,12 +189,12 @@ class testOfCSPHPXML extends UnitTestCase {
 			
 			$this->assertEqual('Tue, 10 Jun 2003 04:00:00 GMT', $parser->get_path('/rss/channel/pubDate/value'));
 			
-			#$this->gfObj->debug_print($parser->get_tree(false, true));
-			#$this->assertNotEqual($parser->get_path('/rss/channel/item/0/value/value'), $parser->get_path('/rss/channel/item/0/Value/value'));
-			#$this->assertEqual('Testing cs_phpxml1', $parser->get_path('/rss/channel/item/0/value/value'));
-			#$this->assertEqual('Testing cs_phpxml2', $parser->get_path('/rss/channel/item/0/Value/value'));
+			$this->assertNotEqual($parser->get_path('/rss/channel/item/0/value/value'), $parser->get_path('/rss/channel/item/0/Value/value'));
+			$this->assertEqual('Testing cs_phpxml1', $parser->get_path('/rss/channel/item/0/value/value'));
+			$this->assertEqual('Testing cs_phpxml2', $parser->get_path('/rss/channel/item/0/Value/value'));
 			
-			#$this->assertEqual('xyz', $parser->get_path('/rss/channel/item/0/Value/attribute/note'));
+			$this->assertEqual('test 2', $parser->get_path('/rss/channel/item/0/Value/attributes/note'));
+			$this->assertEqual('test 1', $parser->get_path('/rss/channel/item/0/value/attributes/note'));
 		}
 		
 	}//end test_preserveCase()
