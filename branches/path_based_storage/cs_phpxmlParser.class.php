@@ -86,7 +86,7 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	/**
 	 * CONSTRUCTOR: Read in XML on object creation, via raw data (string), stream, filename, or URL.
 	 */
-	function __construct($data_source, $data_source_type='raw', $preserveCase=false) {
+	function __construct($data_source, $preserveCase=false) {
 		parent::__construct(array());
 		if($data_source === 'unit_test') {
 			//this is only a test... don't do anything.
@@ -100,23 +100,12 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 				$this->preserveCase=$preserveCase;
 			}
 			$this->data = '';
-			if($data_source_type == 'raw') {
+			if(preg_match('/^</', $data_source)) {
 				$this->data = $data_source;
 			}
-			elseif ($data_source_type == 'stream') {
-				while (!feof($data_source)) {
-					$this->data .= fread($data_source, 1000);
-				}
-			}
-			// try filename, then if that fails...
-			elseif (file_exists($data_source)) {
-				$this->data = implode('', file($data_source)); 
-	
-			}
-			// try URL.
 			else {
 				//something went horribly wrong.
-				throw new exception(__METHOD__ .": FATAL: unable to find resource");
+				throw new exception(__METHOD__ .": FATAL: invald data");
 			}
 		}
 	}//end __construct()
