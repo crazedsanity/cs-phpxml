@@ -23,16 +23,21 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	private $iteration = 0; //current iteration/loop number
 	private $maxIterations = 2000; //if we loop this many times, assume something went wront & die.
 	private $noDepthStringForCloseTag=NULL; //used to tell close_tag() to not set depth string...
+	private $preserveCase=false;
 	
 	//=================================================================================
 	/**
 	 * The construct.  Pass the array in here, then call get_xml_string() to see the results.
 	 */
-	public function __construct($xmlArray) {
+	public function __construct($xmlArray, $preserveCase=false) {
 		if(is_array($xmlArray) && count($xmlArray)) {
 			//all looks good.  Give 'em the go ahead.
 			$this->goAhead = TRUE;
 			$this->xmlArray = $xmlArray;
+			
+			if(is_bool($preserveCase)) {
+				$this->preserveCase = $preserveCase;
+			}
 			
 			//create an arrayToPath{} object.
 			parent::__construct($xmlArray);
@@ -133,10 +138,16 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 		//set the name of the last tag opened, so it can be used later as needed.
 		$this->lastTag = $tagName;
 		
-		$retval = '<'. strtolower($tagName);
+		if(!$this->preserveCase) {
+			$tagName = strtolower($tagName);
+		}
+		$retval = '<'. $tagName;
 		if(is_array($attrArr) && count($attrArr)) {
 			foreach($attrArr as $field=>$value) {
-				$addThis = strtolower($field) . '="' . htmlentities($value) .'"';
+				if(!$this->preserveCase) {
+					$field = strtolower($field);
+				}
+				$addThis = $field . '="' . htmlentities($value) .'"';
 				$retval = $this->create_list($retval, $addThis, " ");
 			}
 		}

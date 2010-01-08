@@ -61,20 +61,28 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	private $reservedWords = array('attributes', 'type', 'value');
 	private $tagTypes = array('open', 'complete');
 	private $numericPaths = array();
+	private $preserveCase = false;
 	
 	//=================================================================================
 	/**
 	 * The constructor.
 	 */
-	public function __construct($rootElement="main", array $xmlns=NULL) {
+	public function __construct($rootElement="main", array $xmlns=NULL, $preserveCase=false) {
 		//check to ensure there's a real element.
 		if(!strlen($rootElement)) {
 			//Give it a default root element.
 			$rootElement = "main";
 		}
 		
+		if(is_bool($preserveCase)) {
+			$this->preserveCase = $preserveCase;
+		}
+		
 		//set the root element
-		$this->rootElement = strtoupper($rootElement);
+		if(!$this->preserveCase) {
+			$rootElement = strtoupper($rootElement);
+		}
+		$this->rootElement = $rootElement;
 		
 		//create the basic XML structure here.
 		$xmlArray = $this->create_tag($this->rootElement, array(), $xmlns, 'open');
@@ -210,7 +218,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * Creates an XML string based upon the current internal array structure.
 	 */
 	public function create_xml_string($addXmlVersion=FALSE) {
-		$xmlBuilder = new cs_phpxmlBuilder($this->a2p->get_data());
+		$xmlBuilder = new cs_phpxmlBuilder($this->a2p->get_data(), $this->preserveCase);
 		$retval = $xmlBuilder->get_xml_string($addXmlVersion);
 		return($retval);
 		
@@ -221,8 +229,10 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	private function create_tag($tagName, $value=NULL, array $attributes=NULL, $type=NULL) {
-		//upper-case the tagname.
-		$tagName = strtoupper($tagName);
+		if(!$this->preserveCase) {
+			//upper-case the tagname.
+			$tagName = strtoupper($tagName);
+		}
 		
 		//set a default type for the tag, if none defined.
 		if(is_null($type) || !in_array($type, $this->tagTypes)) {
@@ -275,7 +285,10 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 			$newTagName = null;
 			//fix each tag in the path.
 			if(strtolower($tagName) == 'value' && $index != $lastIndex) {
-				$newTagName = strtoupper($tagName);
+				$newTagName = $tagName;
+				if(!$this->preserveCase) {
+					$newTagName = strtoupper($tagName);
+				}
 			}
 			else {
 				if(strtolower($tagName) == 'value' && $index == $lastIndex) {
@@ -285,7 +298,10 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 					if(is_array($checkUpperPath) && is_array($checkLowerPath)) {
 						//there's two paths... uh... just let them use the one they requested.
 						if(preg_match('/^V/', $tagName)) {
-							$newTagName = strtoupper($tagName);
+							$newTagName = $tagName;
+							if(!$this->preserveCase) {
+								$newTagName = strtoupper($tagName);
+							}
 						}
 						else {
 							$newTagName = strtolower($tagName);
@@ -295,7 +311,10 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 						$newTagName = strtolower($tagName);
 					}
 					else {
-						$newTagName = strtoupper($tagName);
+						$newTagName = $tagName;
+						if(!$this->preserveCase) {
+							$newTagName = strtoupper($tagName);
+						}
 					}
 				}
 				else {
@@ -330,8 +349,10 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 			$tagName = strtolower($tagName);
 		}
 		else {
-			//not reserved: should be upper-case.
-			$tagName = strtoupper($tagName);
+			if(!$this->preserveCase) {
+				//not reserved: should be upper-case.
+				$tagName = strtoupper($tagName);
+			}
 		}
 		
 		return($tagName);
@@ -393,7 +414,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 		$this->a2p->unset_data($path ."/type");
 		
 		//add this path to our internal array of numeric paths.
-		$this->numericPaths[$path]++;
+		@$this->numericPaths[$path]++;
 	}//end set_tag_as_multiple()
 	//=================================================================================
 	
@@ -411,7 +432,10 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 		if(!is_null($path) && strlen($path) > 1 && !$this->verify_path($path,TRUE)) {
 			//create an array to loop through.
 			$path = $this->fix_path($path);
-			$pathArr = $this->a2p->explode_path(strtoupper($path));
+			if(!$this->preserveCase) {
+				$path = strtoupper($path);
+			}
+			$pathArr = $this->a2p->explode_path($path);
 			
 			//rip the final tag out.
 			$finalTag = array_pop($pathArr);
@@ -535,7 +559,9 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 */
 	public function rename_root_element($newName) {
 		//first, change the internal "rootElement" pointer.
-		$newName = strtoupper($newName);
+		if(!$this->preserveCase) {
+			$newName = strtoupper($newName);
+		}
 		$oldRoot = $this->rootElement;
 		$this->rootElement = $newName;
 		
