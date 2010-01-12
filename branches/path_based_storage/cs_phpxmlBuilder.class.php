@@ -24,6 +24,7 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	private $maxIterations = 2000; //if we loop this many times, assume something went wront & die.
 	private $noDepthStringForCloseTag=NULL; //used to tell close_tag() to not set depth string...
 	private $preserveCase=false;
+	private $rootAttributes=null;
 	
 	//=================================================================================
 	/**
@@ -69,20 +70,23 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 				//set the root element.
 				$this->rootElement = $keys[0];
 				
-				//pull the rootElement out of the equation.
-				$rootAttributes = $this->a2p->get_data("/". $this->rootElement ."/attributes");
-				if(is_array($rootAttributes)) {
+				//pull the rootElement's attributes.
+				$this->rootAttributes = $this->a2p->get_data("/". $this->rootElement ."/attributes");
+				if(is_array($this->rootAttributes)) {
 					//remove it from our internal array.
-					$this->a2p->unset_data("/". $this->rootElement ."/attributes");
+					#$this->a2p->unset_data("/". $this->rootElement ."/attributes");
 				}
 				//now remove the "type" index.
-				$this->a2p->unset_data("/". $this->rootElement ."/type");
+				#$this->a2p->unset_data("/". $this->rootElement ."/type");
 			}
+//			
+//			//open a tag for the root element.
+//			$this->open_tag($this->rootElement, $rootAttributes);
+//			$this->a2p->set_data('/', $this->a2p->get_data($this->rootElement .'/0/'));
 			
-			//open a tag for the root element.
-			$this->open_tag($this->rootElement, $rootAttributes);
 			
 			//loop through the array...
+			//TODO: setting this to "/{rootElement}/0" (and removing type + attributes indexes) might fix issues with openning & closing it...
 			$this->process_sub_arrays('/'. $this->rootElement);
 			
 			//close the root element.
@@ -104,16 +108,25 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	
 	
 	//=================================================================================
-	public function get_xml_string($addXmlVersion=FALSE) {
+	public function get_xml_string($addXmlVersion=FALSE, $addEncoding=null) {
 		if($this->goAhead == TRUE) {
 			
 			//get the parsed data...
 			$retval = $this->xmlString;
 			
 			if($addXmlVersion) {
+				$addThis = "";
+				if(is_string($addXmlVersion) && preg_match('/[0-9]\./[0-9]', $addXmlVersion)) {
+					$addThis .= 'version="'. $addXmlVersion .'"';
+				}
+				else {
+					$addThis = ' version="1.0"';
+				}
+				if(!is_null($addEncoding) && $addEncoding !== false) {
+					$addThis = ' encoding="'. $addEncoding .'"';
+				}
 				//Add the "<?xml version" stuff.
-				//TODO: shouldn't the encoding be an option... somewhere?
-				$retval = '<?xml version="1.0" encoding="UTF-8"?>'. "\n". $retval;
+				$retval = '<?xml'. $addThis .'?>'. "\n". $retval;
 			} 
 		}
 		else {
@@ -142,6 +155,14 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 			$tagName = strtolower($tagName);
 		}
 		$retval = '<'. $tagName;
+		
+		
+		//TODO: see TODO in process_xml_array() for info on fixing this...
+		if($tagName == $this->rootElement && $this->depth == 0) {
+			//add root element's attributes, if there are any.
+			$attrArr = $this->rootAttributes;
+		}
+		
 		if(is_array($attrArr) && count($attrArr)) {
 			foreach($attrArr as $field=>$value) {
 				if(!$this->preserveCase) {
@@ -164,7 +185,7 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 		//only increment the depth if there are tags beneath this one.
 		if(!$singleTag) {
 			$this->depth++;
-		}	
+		}
 		
 	}//end open_tag();
 	//=================================================================================
@@ -177,13 +198,19 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	 */
 	private function close_tag($tagName, $includeDepthString=TRUE) {
 		$this->depth--;
-		$depthString = "";
-		if($includeDepthString && !$this->noDepthStringForCloseTag) {
-			//add depth.
-			$depthString = $this->create_depth_string();
+		//TODO: fix so extra ending tag for rootElement doesn't happen.
+		if($this->depth != 0) {		//depth 0 (root) causes an extra--invalid--ending tag for the root element.
+			$depthString = "";
+			if($includeDepthString && !$this->noDepthStringForCloseTag) {
+				//add depth.
+				$depthString = $this->create_depth_string();
+			}
+			$this->noDepthStringForCloseTag = NULL;
+			if(!$this->preserveCase) {
+				$tagName = strtolower($tagName);
+			}
+			$this->xmlString .= $depthString . "</". $tagName . ">";
 		}
-		$this->noDepthStringForCloseTag = NULL;
-		$this->xmlString .= $depthString . "</". strtolower($tagName) . ">";
 	}//end close_tag()
 	//=================================================================================
 	
@@ -236,12 +263,12 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 			 * multiple "item" tags beneath "items" (/CART/ITEMS/ITEM), then /CART/ITEMS/type exists,
 			 * but /CART/ITEMS/ITEM/type does NOT: /CART/ITEMS/ITEM/0/type, however, does exist.
 			 */
+			
+			$parentAttribs = null;
 			//set the type & attributes stuff.
 			{
 				if(isset($subArray['type']) || isset($subArray['attributes'])) {
-					$parentType = $subArray['type'];
-					
-					$parentAttribs = null;
+					@$parentType = $subArray['type'];
 					if(isset($subArray['attributes']) && is_array($subArray['attributes'])) {
 						$parentAttribs = $subArray['attributes'];
 					}
@@ -356,7 +383,9 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 							
 							$useThisTagName = array_pop($pathArr);
 							$checkData = $this->a2p->get_data($myBasePath);
-							if($checkData['type'] === 'complete') {
+							
+							//NOTE: if "type" isn't set, it is assumed to be 'open'
+							if(isset($checkData['type']) && $checkData['type'] === 'complete') {
 								//process it specially.
 								if(is_null($checkData['value']) || !isset($checkData['value'])) {
 									//single tag...
