@@ -1,0 +1,12 @@
+## Stores the current version of the cs-content system, and it's source.  Please do NOT modify this file.
+
+VERSION: 1.0-RC1
+PROJECT: cs-phpxml
+$HeadURL: https://cs-phpxml.svn.sourceforge.net/svnroot/cs-phpxml/trunk/1.0/VERSION $
+
+## Do NOT alter anything below this line.  It is for sanity checking.
+54fb544c5607dfe6d9a509cab366ac25  cs_arrayToPath.class.php
+fc085b188479c3c84e6c1b19207f90d2  cs_phpxml.abstract.class.php
+1139551f50482f76e27099f0aef167e1  cs_phpxmlBuilder.class.php
+f7dd36536e891adb5a60494b239bdf6c  cs_phpxmlCreator.class.php
+1f54cf96148890491cbb05ebe2651de4  cs_phpxmlParser.class.php
