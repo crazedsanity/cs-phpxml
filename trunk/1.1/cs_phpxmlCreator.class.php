@@ -17,7 +17,7 @@
  * that have the same name are represented numerically).
  * 
  * EXAMPLE OF THE EXPECTED RETURNED XML:
- * <cart>
+ * <cart foo="bar">
  * 		<item comment="1">
  * 			<name>foo</name>
  * 			<value>lots</value>
@@ -60,7 +60,7 @@
 	 $xml->add_attribute("/cart/item", array('comment'=>"1"));	//this REPLACES all attributes with the given array.
 	 $xml->add_tag("/cart/item/value", "lots");
 	 $xml->add_tag("/cart/item/extra", null);
-	 $xml->add_tag("/cart/item/extra", array('location'=>"the internet"));
+	 $xml->add_tag("/cart/item/extra", null, array('location'=>"the internet"));
 	 $xml->add_tag("/cart/item/1/name", "bar");
 	 $xml->add_tag("/cart/item/1/value", "even more");
 	 $xml->add_attribute("/cart/item/1", array('comment'=>"2"));
@@ -71,14 +71,15 @@
 
 
 class cs_phpxmlCreator extends cs_phpxmlAbstract {
-	private $xmlArray;
-	private $rootElement;
-	private $numericPaths = array();
-	private $preserveCase = false;
+	protected $rootElement;
+	protected $preserveCase = false;
 	protected $a2p = null;
 	
 	private $tags = array();
 	private $attributes = array();
+	
+	const dataIndex = '__data__';
+	const attributeIndex = '__attribs__';
 	
 	//=================================================================================
 	/**
@@ -95,6 +96,10 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 			$this->preserveCase = $preserveCase;
 		}
 		
+		if(!$this->preserveCase) {
+			$this->rootElement = strtoupper($this->rootElement);
+		}
+		
 		//set the root element
 		if(!$this->preserveCase) {
 			$rootElement = strtoupper($rootElement);
@@ -103,6 +108,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 		
 		//create our internal data structure using arrayToPath{}.
 		parent::__construct();
+		
 		
 	}//end __construct()
 	//=================================================================================
@@ -119,14 +125,24 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * @param $attributes	(array,optional) name=>value array of attributes to add to this tag.
 	 */
 	public function add_tag($path, $value=NULL, array $attributes=NULL) {
-		
 		if(!$this->preserveCase) {
 			$path = strtoupper($path);
 		}
 		$path = $this->fix_path($path);
 		
-		$this->tags[$path] = $value;
-		$this->add_attribute($path, $attributes);
+		if(preg_match('/^\/'. $this->rootElement .'/', $path)) {
+			#$this->tags[$path] = $value;
+			if(is_null($value)) {
+				$value = "";
+			}
+			$this->a2p->set_data($path .'/'. self::dataIndex, $value);
+			if(is_array($attributes)) {
+				$this->add_attribute($path, $attributes);
+			}
+		}
+		else {
+			throw new exception(__METHOD__ .": must use full paths (". $path ."), rootElement=(". $this->rootElement .")");
+		}
 		
 	}//end add_tag()
 	//=================================================================================
@@ -139,7 +155,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 */
 	public function add_attribute($path, array $attributes=null) {
 		if(preg_match('/^\/'. $this->rootElement .'$/', $path)) {
-			$path = $this->rootElement;
+			$path = '/'. $this->rootElement .'/0';
 		}
 		else {
 			$path = $this->fix_path($path);
@@ -150,9 +166,21 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 			if(isset($this->attributes[$path])) {
 				unset($this->attributes[$path]);
 			}
+			try {
+				$this->a2p->unset_data($path .'/'. self::attributeIndex);
+			}
+			catch(Exception $e) {
+				//no worries... I guess.
+			}
 		}
 		else {
 			$this->attributes[$path] = $attributes;
+			foreach($attributes as $n=>$v) {
+				if(is_null($v)) {
+					$attributes[$n] = "";
+				}
+			}
+			$this->a2p->set_data($path .'/'. self::attributeIndex, $attributes);
 		}
 		
 	}//end add_attribute()
@@ -162,22 +190,9 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	/**
-	 * DEPRECATED
-	 */
-	public function verify_path() {
-		//TODO: remove this unused method.
-		trigger_error(__METHOD__ .": deprecated");
-	}//end verify_path()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
 	 * Creates an XML string based upon the current internal array structure.
 	 */
 	public function create_xml_string($addXmlVersion=FALSE, $addEncoding=FALSE) {
-		$this->initialize_a2p();
 		$xmlBuilder = new cs_phpxmlBuilder($this->a2p->get_data(), $this->preserveCase);
 		$retval = $xmlBuilder->get_xml_string($addXmlVersion, $addEncoding);
 		return($retval);
@@ -189,295 +204,11 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	/**
-	 * Break the path into bits, explicitely removing the rootElement from the 
-	 * given path: once numeric indexes have been added, the rootElement will 
-	 * then be prepended.
-	 * 
-	 * NOTE: this must NOT be used when altering attributes of the root path or 
-	 * in the instance that the root element contains data.
-	 */
-	private function fix_path($path) {
-		if(!$this->preserveCase) {
-			$path = strtoupper($path);
-		}
-		$path = preg_replace('/\/+/', '/', $path);
-		
-		$bits = $this->explode_path($path);
-		
-		if(preg_match('/^\//', $path)) {
-			/*  absolute path: first item MUST be root element, followed by 0 -- a higher number 
-			 *	would indicate multiple root elements.
-			 */
-			if(preg_match('/^\/'. $this->rootElement .'\//', $path)) {
-				array_shift($bits);
-				if(preg_match('/^\/'. $this->rootElement .'\/0\//', $path)) {
-					array_shift($bits);
-				}
-			}
-			else {
-				throw new exception(__METHOD__ .": absolute paths must start with rootElement (". $this->rootElement ."), " .
-						"and any numeric indexed directly following it MUST be zero (path: ". $path . ")");
-			}
-		}
-		
-		/* the key::: each tag should have a number in the path beyond it.  So "/path/to/something" becomes 
-		 *	"/path/0/to/0/something/0", but "/path/to/1/something" must become "/path/0/to/1/something/0" 
-		 *	(instead of "/path/0/to/0/1/0/something/0" by automatically adding a 0 to each bit)
-		 *
-		 * The index handled should ALWAYS be a tag: should the next index be numeric, it will be skipped.
-		 */
-		
-		//this array will be transformed into a path again later.
-		$newBits = array(
-			0	=> $this->rootElement,
-			1	=> "0"
-		);
-		$highestBit = (count($bits) -1);
-		for($i=0;$i<count($bits);$i++) {
-			$currentBit = $bits[$i];
-			if(is_numeric($currentBit)) {
-				/*
-				 * This happens when:
-				 * 	-- there are two numerics in a row ("/path/0/0")
-				 */
-				throw new exception(__METHOD__ .": found numeric (". $currentBit .") where tag should have been");
-			}
-			else {
-				//add this tag ($n) to the array
-				$newBits[] = $currentBit;
-				
-				//make sure we don't go past the end of the array.
-				if($i < $highestBit) { 
-					if(is_numeric($bits[($i+1)])) {
-						//next item is numeric: put it into the path & skip it.
-						$newBits[] = $bits[($i+1)];
-						$i++;
-					}
-					else {
-						$newBits[] = "0";
-					}
-				}
-				else {
-					//the next bit would have been beyond the end of the array, so the index would be 0.
-					$newBits[] = "0";
-					break;
-				}
-			}
-		}
-		
-		$path = $this->reconstruct_path($newBits);
-		
-		return($path);
-	}//end fix_path()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
-	 * Takes an array created by explode_path() and reconstitutes it into a proper path.
-	 */
-	private function reconstruct_path(array $pathArr) {
-		//setup the path variable.
-		$path = "";
-		foreach($pathArr as $index=>$tagName) {
-			//add this tag to the current path.
-			$path = $this->create_list($path, $tagName, '/');
-		}
-		
-		//add the leading '/'.
-		$path = '/'. $path;
-		
-		//give 'em what they want.
-		return($path);
-	}//end reconstruct_path()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	private function explode_path($path) {
-		//make sure it has a leading slash.
-		$path = preg_replace('/^\//', '', $path);
-		$path = '/'. $path;
-		
-		//explode the path on slashes (/)
-		$pathArr = explode('/', $path);
-		
-		//now, remove the first element, 'cuz it's blank.
-		array_shift($pathArr);
-		
-		return($pathArr);
-	}//end explode_path()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
-	 * DEFUNCT.
-	 */
-	public function set_tag_as_multiple($path) {
-		//TODO: remove this defunct method
-		trigger_error(__METHOD__ .": method is defunct");
-	}//end set_tag_as_multiple()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
-	 * Creates a blank tag: use of this is deprecated and may be removed in 
-	 * the future.
-	 */
-	public function create_path($path) {
-		$retval = $this->add_tag($path,null,null);
-		return($retval);
-	}//end create_path()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
-	 * Like add_tag() except that $path has numeric sub-indexes, & the data to be added
-	 * can be added as the next index (kinda like setting $array[] = $dataArr).  
-	 * 
-	 * EXAMPLE: if multiple "songs" are beneath "/main/songs", call it like this:
-	 * $myArr = array
-	 * (
-	 * 		'first'	=> array
-	 * 		(
-	 * 			'title'		=> 'first title',
-	 * 			'artist'	=> 'Magic Man'
-	 * 		),
-	 * 		'second'	=> array
-	 * 		(
-	 * 			'title'		=> 'second title',
-	 * 			'artist'	=> 'Another ARtist'
-	 * 		)
-	 * );
-	 * $xml->add_tag_multiple('/main/songs', $myArr[0]);
-	 * $xml->add_tag_multiple('/main/songs', $myArr[1]);
-	 */
-	public function add_tag_multiple() {
-		//TODO: re-implement this...
-		throw new exception(__METHOD__ .": NOT IMPLEMENTED YET");
-		
-		//loop through, finding all paths that start with the given one.  Find the 
-		//	highest referenced index at the end of that path, then create a new tag 
-		//	along that path but implement the given index by one.
-		
-		foreach($this->tags as $i=>$v) {
-			
-		}
-		
-		
-		$path = $this->fix_path($path);
-		
-		
-		$bits = $this->explode_path($path);
-		$lastBit = $bits[(count($bits)-1)];
-		
-		if(is_numeric($lastBit)) {
-			throw new exception(__METHOD__ .": cannot set path as numeric if part of path (". $lastBit .") is numeric");
-		}
-		else {
-			$path = $path .'/';
-			
-			foreach($this->tags as $path=>$subData) {
-				if(preg_match()) {
-					
-				}
-			}
-		}
-		
-		
-		//set a default value.
-		$retval = NULL;
-		
-		//check to see if it's already a numeric path.
-		if(isset($this->numericPaths[$path])) {
-			//good to go: pull the data that already exists.
-			$myData = $this->a2p->get_data($path);
-			
-			//set the tagData array...
-			$tagData = array();
-			
-			//if there's attributes for the main tag, set 'em now.
-			$tagData['type'] = 'open';
-			if(!is_null($attributes)) {
-				//set it.
-				$tagData['attributes'] = $attributes;
-			}
-			
-			if(is_array($data)) {
-				//loop through $dataArr & create tags for each of the indexes.
-				foreach($data as $tagName=>$value) {
-					//create the tag.
-					$myTag = $this->add_tag($tagName, $value);
-					$tagData = array_merge($tagData, $myTag);
-					
-				}
-			}
-			else {
-				//it's just data, meaning it's the VALUE.
-				if(!is_null($data) && strlen($data)) {
-					$tagData['value'] = $data;
-				}
-				$tagData['type'] = 'complete';
-			}
-			
-			//now add the tag as a numeric index to the existing data.
-			$retval = count($myData);
-			$myData[] = $tagData;
-			
-			//now set the data into our array.
-			$this->a2p->set_data($path, $myData);
-		}
-		else {
-			//it's not already a numeric path.  DIE.
-			throw new exception(__METHOD__ ."() attempted to add data to non-numeric path ($path)");
-		}
-		
-		return($retval);
-	}//end add_tag_multiple()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	public function rename_root_element() {
-		trigger_error(__METHOD__ .": DEPRECATED");
-	}//end rename_root_element()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
-	 * Calls $this->a2p->get_data($path).  Just a wrapper for private data.
-	 */
-	public function get_data($path=NULL) {
-		
-		$path = $this->fix_path($path);
-		$this->initialize_a2p();
-		
-		$retval = $this->a2p->get_data($path);
-		return($retval);
-	}//end get_data()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
 	 * Takes an XMLParser object & loads data from it as the internal XML array. This 
 	 * facilitates the ability to add data to existing XML.
 	 */
 	public function load_xmlparser_data(cs_phpxmlParser $obj) {
 		//TODO: need to be able to re-populate $this->tags & $this->attributes
-		throw new exception(__METHOD__ .": RE-IMPLEMENT THIS");
 		$data = $obj->get_tree();
 		$this->xmlArray = $data;
 		$this->a2p = new cs_arrayToPath($data);
@@ -493,47 +224,5 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	}//end load_xmlparser_data()
 	//=================================================================================
 	
-	
-	
-	//=================================================================================
-	public function remove_path($path) {
-		//TODO: Fix this (it deletes WAY TOO MUCH)
-		throw new exception(__METHOD__ .": fix me!");
-		$path = $this->fix_path($path);
-		foreach($this->tags as $i=>$v) {
-			$regexSafePath = preg_replace('/\//', '\\/', $i);
-			if(preg_match('/^'. $regexSafePath .'/', $i)) {
-				unset($this->tags[$i]);
-			}
-		}
-		foreach($this->attributes as $i=>$v) {
-			$regexSafePath = preg_replace('/\//', '\\/', $i);
-			if(preg_match('/^'. $regexSafePath .'/', $i)) {
-				unset($this->attributes[$i]);
-			}
-		}
-	}//end remove_path();
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	private function initialize_a2p() {
-		$this->a2p = new cs_arrayToPath(array());
-		foreach($this->tags as $path=>$value) {
-			if(!is_null($value) && strlen($value)) {
-				$this->a2p->set_data($path .'/value', $value);
-				$this->a2p->set_data($path .'/type', "complete");
-			}
-			else {
-				$this->a2p->set_data($path, null);
-			}
-		}
-		foreach($this->attributes as $path=>$attribs) {
-			$this->a2p->set_data($path .'/attributes', $attribs);
-		}
-		
-	}//end initialize_a2p()
-	//=================================================================================
 }//end xmlCreator{}
 ?>

@@ -49,7 +49,7 @@ class cs_arrayToPath extends cs_phpxmlAbstract {
 	 * 
 	 * TODO::: there is a strange recursion issue when $prefix is non-null: prefix is presently hardwired as NULL for now... 
 	 */
-	public function __construct($array) {
+	public function __construct($array=null) {
 		$this->set_version_file_location(dirname(__FILE__) . '/VERSION');
 		if($array === 'unit_test') {
 			//it's a unit test.
@@ -57,12 +57,12 @@ class cs_arrayToPath extends cs_phpxmlAbstract {
 		}
 		else {
 			$this->get_version();
-			if(!is_array($array)) {
-				//I don't deal with non-arrays.  Idiot.
-				throw new exception(__METHOD__ .': got an invalid datatype.');
+			if(is_array($array)) {
+				$this->data = $array;
 			}
-			//create a reference to the data, so if it changes, the class doesn't have to be re-initialized.
-			$this->data = $array;
+			else {
+				$this->data = array();
+			}
 		}
 	}//end __construct()
 	//======================================================================================
@@ -142,7 +142,7 @@ class cs_arrayToPath extends cs_phpxmlAbstract {
 	 * 
 	 * @return <str>	PASS: this is the fixed path
 	 */
-	private function fix_path($path) {
+	protected function fix_path($path) {
 		$retval = $path;
 		if(!is_null($path) && strlen($path)) {
 			
