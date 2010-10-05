@@ -10,77 +10,78 @@
  * Last Updated:::::::: $Date$
  * 
  * 
- * Built for PHP to programatically parse & understand data within an XML document.
+ * Built to convert an XML document into a multi-dimensional array.
  * 
- * 
- * NOTES ON CODE ORIGINS:::
- * ---------------------------------- 
- * 		Based on code found online at:
- * 		http://php.net/manual/en/function.xml-parse-into-struct.php
- * 		Author: Eric Pollmann
- * 		Released into public domain September 2003
- * 		http://eric.pollmann.net/work/public_domain/
- * ---------------------------------- 
  * 
  * *********** EXAMPLE ***********
  * 
  * Original file contents:
  * <test xmlns="http://your.domain.com/stuff.xml">
  * 		<indexOne>hello</indexOne>
- * 		<my_single_index testAttribute="hello" />
+ * 		<my_single_index testAttribute="hello" second_attribute="Another, for testing" />
  * 		<multiple_items>
  * 			<item>1</item>
  * 			<item>2</item>
  * 		</multiple_items>
  * </test>
  * 
- * Would return:
- * 
+ * Would create an array like:
  * array(
- * 	TEST => array(
- * 		type => 'open',
- * 		attributes => array(
- * 			xmlns => 'http://your.domain.com/stuff.xml'
- * 		)
- * 		INDEXONE => 'hello',
- * 		MY_SINGLE_INDEX = array(
- * 			type => 'complete',
- * 			
+ * 	"test" => array(
+ * 		0 => array(
+ * 			"__attributes" => array(
+ * 				"xmlns" => "http://your.domain.com/stuff.xml"
+ * 			),
+ * 			"indexOne" => array(
+ * 				0 => array(
+ * 					"__data__" => "hello"
+ * 				)
+ * 			),
+ * 			"my_single_index" => array(
+ * 				0 => array(
+ * 					"__attribs" => array(
+ * 						"testAttribute" => "hello",
+ * 						"second_attribute" => "Another, for testing"
+ * 					)
+ * 				)
+ * 			),
+ * 			"multiple_items" => array(
+ * 				0 => array(
+ * 					"item" => array(
+ * 						0 => array(
+ * 							"__data__" => 1
+ * 						),
+ * 						1 => array(
+ * 							"__data__" => 2
+ * 						)
+ * 					)
+ * 				)
+ * 			)
  * 		)
  * 	)
  * );
  *  
+ * All data is retrieve using "paths" (similar to xpath).  For instance, to retrieve the value of the second index beneath 
+ * the "multiple_items" tag, the path would be:
+ * 		"/test/0/multiple_items/0/item/1"
  * 
  */
 
 
 class cs_phpxmlParser extends cs_phpxmlAbstract {
 
-/*
- * Based on code found online at:
- * http://php.net/manual/en/function.xml-parse-into-struct.php
- * 
- * Some things to keep in mind:  
- * 	1.) all indexes that appear within the document are UPPER CASE.
- *  2.) attributes of a tag will be represented in **lower case** as "attributes":
- * 			this is done to avoid collisions, in case there's a tag with the name
- * 			of "attributes"... 
- *  3.) Anything that has a tag named "values" will be represented in the final array
- * 			by "VALUES/VALUES", as retrieved by get_path() (see "get_path()" notes).
- * 
- * TODO: implement something to take array like this class returns & put it in XML form.
- */
-
-	var $data;			// Input XML data buffer
-	var $vals;			// Struct created by xml_parse_into_struct
-	var $collapse_dups;	// If there is only one tag of a given name,
-						//   shall we store as scalar or array?
-	var $index_numeric;	// Index tags by numeric position, not name.
-						//   useful for ordered XML like CallXML.
-	private $childTagDepth = 0;
-	private $makeSimpleTree = FALSE;
-	private $xmlPaths = array();
-	private $preserveCase=false;
+	private $data;					// Input XML data buffer
+	private $currentPath = null;
+	private $closedPaths = array();
+	private $xmlVals = array();
+	private $xmlIndex = array();
+	private $isInitialized = false;
+	
+	protected $a2p = null;
+	protected $preserveCase=false;	// If it is set to boolean false, tag and attribute names will be UPPERCASED.
+	
+	const dataIndex		= cs_phpxmlCreator::dataIndex;
+	const attribIndex	= cs_phpxmlCreator::attributeIndex;
 	
 	//=================================================================================
 	/**
@@ -94,8 +95,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		}
 		else {
 			$this->get_version();
-			$this->collapse_dups = 1;
-			$this->index_numeric = 0;
 			if(is_bool($preserveCase)) {
 				$this->preserveCase=$preserveCase;
 			}
@@ -105,7 +104,7 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 			}
 			else {
 				//something went horribly wrong.
-				throw new exception(__METHOD__ .": FATAL: invald data");
+				throw new exception(__METHOD__ .": FATAL: invald data::: ". htmlentities($data_source));
 			}
 		}
 	}//end __construct()
@@ -118,8 +117,7 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	 * Pase the XML file into a verbose, flat array struct.  Then, coerce that into a 
 	 * simple nested array.
 	 */
-	function get_tree($simpleTree=FALSE) {
-		$this->makeSimpleTree = $simpleTree;
+	function get_tree() {
 		$parser = xml_parser_create('ISO-8859-1');
 		xml_parser_set_option($parser, XML_OPTION_SKIP_WHITE, 1);
 		
@@ -134,112 +132,152 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		xml_parse_into_struct($parser, $this->data, $vals, $index); 
 		xml_parser_free($parser);
 		
-		$i = -1;
-		return($this->get_children($vals, $i));
+		//sanity test: the arrays created by xml_parse_into_struct() MUST conform to a 
+		//	certain pattern; if they don't, all is hopelessly lost.
+		$sanityCheck=0;
+		$sanityMustBe=4;
+		$firstVal = $vals[0];
+		$lastVal = $vals[count($vals)-1];
+		$this->rootElement = $firstVal['tag'];
+		if(!$this->preserveCase) {
+			$this->rootElement = strtoupper($this->rootElement);
+		}
+		
+		if($firstVal['tag'] == $lastVal['tag']) {
+			$sanityCheck++;
+		}
+		if($lastVal['level'] == 1 && $firstVal['level'] == 1) {
+			$sanityCheck++;
+		}
+		if($vals[$index[$this->rootElement][0]]['tag'] == $this->rootElement) {
+			$sanityCheck++;
+		}
+		if($vals[$index[$this->rootElement][1]]['tag'] == $this->rootElement) {
+			$sanityCheck++;
+		}
+		
+		if($sanityCheck == $sanityMustBe) {
+			$this->a2p = new cs_arrayToPath(array());
+			$this->xmlVals = $vals;
+			$this->xmlIndex = $index;
+			$this->closedPaths = array();
+			$this->currentPath = '/'. $this->rootElement .'/0';
+			$this->build_a2p();
+		}
+		else {
+			throw new exception(__METHOD__ .": xml_parse_into_struct() created arrays with invalid data");
+		}
+		$this->isInitialized = true;
+		
+		//retrieve the requested path.
+		return($this->a2p->get_data());
 	}//end get_tree()
 	//=================================================================================
 	
 	
 	
 	//=================================================================================
-	/**
-	 * Internal function: build a node of the tree.
-	 */
-	private function build_tag($thisvals, $vals, &$i, $type) {
-		
-		$tag = array();
-		$tag['type'] = $type;
-
-		if($type === 'complete') {
-			// complete tag, just return it for storage in array.
-			if($this->makeSimpleTree) {
-				@$tag = $thisvals['value'];
-			}
-			else {
-				if(isset($thisvals['attributes'])) {
-					$tag['attributes'] = $thisvals['attributes'];
-				}
-				if(isset($thisvals['value'])) {
-					$tag['value'] = $thisvals['value'];
-				}
-			}
-		}
-		else {
-			// open tag, recurse
-			$myChildren = $this->get_children($vals, $i);
-			if(isset($thisvals['attributes'])) {
-				$tag['attributes'] = $thisvals['attributes'];
-			}
-			$tag = array_merge($tag, $myChildren);
-			
-			//build it as simple as possible.
-			if($this->makeSimpleTree) {
-				unset($tag['attributes'], $tag['type']);
-			}
-		}
-		
-
-		return($tag);
-	}//end build_tag()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	/**
-	 * Internal function: build an nested array representing children
-	 */
-	private function get_children($vals, &$i) {
-		$children = array();     // Contains node data
-		
-		if ($i > -1 && isset($vals[$i]['value'])) {
-			//Node has CDATA before it's children.
-			$children['VALUE'] = $vals[$i]['value'];
-		}
-
-		// Loop through children, until hit close tag or run out of tags
-		while (++$i < count($vals)) {
-			$type = $vals[$i]['type'];
-			
-			/* TODO: find something that causes this instance to fire-off, so I can tell WTF it should do.
-			if ($type === 'cdata')
-			{
-				//TODO: find somewhere that causes this instance to fire off, so we can 
-				// 'cdata':	Node has CDATA after one of it's children
-				// 		(Add to cdata found before in this case)
-				$children['VALUE'] .= $vals[$i]['value'];
-			}
-			else#*/
-			if($type === 'complete' || $type === 'open') {
-				// 'complete':	At end of current branch
-				// 'open':	Node has children, recurse
-				$tag = $this->build_tag($vals[$i], $vals, $i, $type);
-				if ($this->index_numeric) {
-					$tag['TAG'] = $vals[$i]['tag'];
-					$children[] = $tag;
-				}
-				else {
-					$children[$vals[$i]['tag']][] = $tag;
-				}
-			}
-			elseif ($type === 'close') {
-				// 'close:	End of node, return collected data
-				//		Do not increment $i or nodes disappear!
+	private function build_a2p() {
+		foreach($this->xmlVals as $i=>$a) {
+			$dataPath = null;
+			$myData = array();
+			$currentLevel = $a['level'];
+			switch($a['type']) {
+				case 'open':
+					//add the current tag to our path.
+					if($i > 0) {
+						$dataPath = $this->_update_current_path($a['tag']);
+					}
+					else {
+						$dataPath = $this->currentPath;
+					}
+				break;
+				
+				
+				case 'complete':
+					//set the data path by updating current path, then drop back a level: this way the 
+					//	completed tag shows as a closed path AND we have the right path to store data on.
+					$dataPath = $this->_update_current_path($a['tag']);
+					$this->_update_current_path(null);
+				break;
+				
+				
+				case 'close':
+					$this->_update_current_path(null);
 				break;
 			}
-		} 
-		
-		if ($this->collapse_dups) {
-			foreach($children as $key => $value) {
-				if (is_array($value) && (count($value) == 1)) {
-					$children[$key] = $value[0];
+			if(isset($a['value'])) {
+				$myData[self::dataIndex] = $a['value'];
+			}
+			if(isset($a['attributes'])) {
+				$myData[self::attribIndex] = $a['attributes'];
+			}
+			
+			if(count($myData)) {
+				if(!is_null($dataPath) && strlen($dataPath)) {
+					$this->a2p->set_data($dataPath, $myData);
+				}
+				else {
+					throw new exception(__METHOD__ .": could not set data on invalid path (". $dataPath ."), currentPath=(". $this->currentPath .")");
 				}
 			}
+			elseif(!count($myData) && $a['type'] == 'complete') {
+				//store the blank tag.
+				$this->a2p->set_data($dataPath, null);
+			}
 		}
-		return $children;
-	}//end get_children()
+	}//end build_a2p()
 	//=================================================================================
 	
+	
+	
+	//=================================================================================
+	/*
+	 * passing null as $addThis will cause the path to go one lower (i.e. changes "/root/0/element/0" into "/root/0")
+	 */
+	private function _update_current_path($addThis=null) {
+#$this->gfObj->debug_print(__METHOD__ .": currentPath=(". $this->currentPath ."), addThis=(". $addThis .")",1);
+		$myPath = $this->currentPath;
+		$bits = $this->explode_path($myPath);
+		$lastIndex = array_pop($bits);
+		$testPath = $this->reconstruct_path($bits);
+		if(is_numeric($lastIndex)) {
+			if(is_null($addThis)) {
+				//remember that this path was closed!
+				$this->closedPaths[$testPath] = ($lastIndex +1);
+				
+				//now drop that last tag off the path & set it to our current path.
+				array_pop($bits);
+				$myPath = $this->reconstruct_path($bits);
+#$this->gfObj->debug_print(__METHOD__ .": dropping back a level, currentPath=(". $this->currentPath ."), myPath=(". $myPath .")",1);
+			}
+			else {
+				//make sure to increment the path intelligently...
+				$pathIndex = 0;
+				$testPath = $this->currentPath .'/'. $addThis;
+				if(isset($this->closedPaths[$testPath])) {
+					//there's a closed path.  Use the stored value to determine the new path.
+					$pathIndex = $this->closedPaths[$testPath];
+				}
+				
+				//TODO: add test to ensure this path does not already exist.
+				
+				$bits[] = $lastIndex;
+				$bits[] = $addThis;
+				$bits[] = $pathIndex;
+				$myPath = $this->reconstruct_path($bits);
+#$this->gfObj->debug_print(__METHOD__ .": adding a level (". $addThis ."), currentPath=(". $this->currentPath ."), myPath=(". $myPath ."), testPath=(". $testPath ."), pathIndex=(". $pathIndex ."), closedPaths:::: ". $this->gfObj->debug_print($this->closedPaths,0),1);
+			}
+			$this->currentPath = $myPath;
+		}
+		else {
+			throw new exception(__METHOD__ .": found non-numeric index (". $lastIndex .") when storing closed path (". $myPath ."), currentPath=(". $this->currentPath ."), addThis=(". $addThis .")");
+		}
+		return($this->currentPath);
+	}//end _update_current_path()
+	//=================================================================================
+	
+		//this MUST be the root element.
 	
 	
 	//=================================================================================
@@ -251,7 +289,8 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	 * @param $path			(string) path in XML document to traverse...
 	 */
 	public function get_path($path=NULL) {
-		$this->a2p->reload_data($this->get_tree());
+		$this->get_tree();
+		$path = $this->fix_path($path);
 		return($this->a2p->get_data($path));
 	}//end get_path()
 	//=================================================================================
@@ -260,26 +299,33 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	public function get_root_element() {
-		//get EVERYTHING.
-		$myData = $this->get_path();
-		$keys = array_keys($myData);
-		return($keys[0]);
+		if(!$this->isInitialized) {
+			$this->get_tree();//called so it can set rootElement
+		}
+		return($this->rootElement);
 	}//end get_root_element()
 	//=================================================================================
 	
 	
 	
 	//=================================================================================
-	public function get_value($path) {
+	public function get_tag_value($path) {
+		if(!$this->isInitialized) {
+			$this->get_tree();
+		}
 		$retval = NULL;
 		if(!is_null($path)) {
 			$path = preg_replace('/\/$/', '', $path);
 			if(!$this->preserveCase) {
 				$path = strtoupper($path);
 			}
-			$path = $path . '/value';
-			
-			$retval = $this->get_path($path);
+			$data = $this->get_path($path);
+			if(is_array($data) && isset($data[cs_phpxmlCreator::dataIndex])) {
+				$retval = $data[cs_phpxmlCreator::dataIndex];
+			}
+			else {
+				throw new exception(__METHOD__ .": no data found for path=(". $path .")");
+			}
 		}
 		
 		return ($retval);
@@ -290,6 +336,9 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	public function get_attribute($path, $attributeName=NULL) {
+		if(!$this->isInitialized) {
+			$this->get_tree();
+		}
 		$retval = NULL;
 		if(!is_null($path)) {
 			$path = preg_replace('/\/$/', '', $path);
@@ -297,9 +346,22 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 				$path = strtoupper($path);
 				$attributeName = strtoupper($attributeName);
 			}
-			$path = $path . '/attributes/'. $attributeName;
-			
-			$retval = $this->get_path($path);
+			$data = $this->get_path($path);
+			if(is_array($data[cs_phpxmlCreator::attributeIndex])) {
+				$data = $data[cs_phpxmlCreator::attributeIndex];
+				$retval = $data;
+				if(!is_null($attributeName)) {
+					if(isset($data[$attributeName])) {
+						$retval = $data[$attributeName];
+					}
+					else {
+						throw new exception(__METHOD__ .": no such attribute (". $attributeName .") on path=(". $path .")");
+					}
+				}
+			}
+			else {
+				throw new exception(__METHOD__ .": no attributes found on path=(". $path .")");
+			}
 		}
 		
 		return($retval);

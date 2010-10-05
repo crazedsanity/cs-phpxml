@@ -20,11 +20,67 @@ class testOfCSPHPXML extends UnitTestCase {
 		$this->gfObj->debugPrintOpt=1;
 	}//end __construct()
 	//-------------------------------------------------------------------------
+
+
+
+	function test_basics() { 
+		$testXml = new _testXml;
+		$testXml->rootElement = 'mAiN';
+		$testXml->preserveCase = true;
+		$fixPathTests = array(
+			'/mAiN/TEST/1/STUFF'	=> '/mAiN/0/TEST/1/STUFF/0',
+			'/'						=> '/mAiN/0',
+			'/mAiN/0/TEST'			=> '/mAiN/0/TEST/0',
+			'/mAiN/0/TEST/0/ONE/1'	=> '/mAiN/0/TEST/0/ONE/1'
+		);
+		try {
+			foreach($fixPathTests as $fixThis => $matchesThis) {
+				$testXml->preserveCase = true;
+				$this->assertEqual($testXml->fix_path($fixThis), $matchesThis);
+
+				$testXml->preserveCase = false;
+				$this->assertEqual($testXml->fix_path($fixThis), strtoupper($matchesThis));
+			}
+		}
+		catch(Exception $e) {
+			throw new exception("Failed basic fix_path() test... ". $e->getMessage());
+		}
+
+		$xml = new cs_phpxmlCreator('cart', null, true);
+		$xml->add_attribute("/cart", array("foo"=>"bar"));
+		$xml->add_tag("/cart/item/name", "foo");
+		$xml->add_attribute("/cart/item", array('comment'=>"1"));  //this REPLACES all attributes with the given array.
+		$xml->add_tag("/cart/item/value", "lots");
+		$xml->add_tag("/cart/item/extra", null);
+		$xml->add_tag("/cart/item/extra", null, array('location'=>"the internet"));
+		$xml->add_tag("/cart/item/1/name", "bar");
+		$xml->add_tag("/cart/item/1/value", "even more");
+		$xml->add_attribute("/cart/item/1", array('comment'=>"2"));
+		$xml->add_attribute("/cart/item/1/value", array('currency'=>"USD"));
+		$xml->add_tag("/cart/item/1/extra/0", null, array('location'=>"unknown"));   //faster than adding attribs later.
+		$xml->add_tag("/cart/item/1/extra/1/magic", "STUFFING!", array("first"=>"the first tag", "second"=>"second tag"));
+		$xml->add_tag("/cart/item/1/extra/1/extra", null);
+		$xml->add_tag("/cart/extra/magic", "STUFFING!", array("first"=>"the first tag", "second"=>"second tag"));
+		$xml->add_tag("/cart/extra/extra", null);
+		
+		$testFileContents = file_get_contents(dirname(__FILE__) .'/files/basic.xml');
+		$testFileContents = preg_replace("/\n\$/", '', $testFileContents);
+		$generatedXML = $xml->create_xml_string();
+		
+		if(!$this->assertEqual(serialize($testFileContents), serialize($generatedXML))) {
+			$this->gfObj->debug_print(htmlentities(serialize($testFileContents)));
+			$this->gfObj->debug_print(htmlentities(serialize($generatedXML)));
+		}
+
+		$parser = new cs_phpxmlParser($generatedXML);
+		#$this->gfObj->debug_print($xml->load_xmlparser_data());
+		$parser->get_tree();
+	}//end test_basics();
 	
 	
 	
 	//-------------------------------------------------------------------------
-	function test_pass_data_through_all_classes() {
+	function texst_pass_data_through_all_classes() {
 		
 		//first, put it into cs-phpxmlParser.
 		$testFile = dirname(__FILE__) .'/files/test1.xml';
@@ -60,34 +116,42 @@ class testOfCSPHPXML extends UnitTestCase {
 			}
 			
 			$expectedArray = array(
-				'MAIN'	=> array(
-					'type'		=> "open",
-					'TAGONE'	=> array(
-						'type'			=> "open",
-						'VALUE'			=> array(
-										'type'	=> "complete",
-										'value'	=> "location of this TAG is /MAIN/TAGONE/VALUE"
-						)
-					),
-					'TAGTWO'	=> array(
-						'type'			=> "complete",
-						'attributes'	=> array(
-										'VALUE'	=> "this is the attribute of /MAIN/TAGTWO/attributes/VALUE"
-						)
-					),
-					'DATA'		=> array(
-							'type'	=> "open",
-							'VALUE'	=> array(
-								'type'	=> "open",
-								'DATA'	=> array(
-									'type'	=> "open",
-									'VALUE'	=> array(
-										'type'	=> "complete",
-										'value'	=> "data"
+				'MAIN' => array(
+					0 => array(
+						'TAGONE' => array(
+							0	=> array(
+								'VALUE' => array(
+									0 => array(
+										'__data__'	=> "location of this TAG is /MAIN/TAGONE/VALUE"
+									)
+								)
+							)
+						),
+						'TAGTWO' => array(
+							0 => array(
+								'__attribs__'	=> array(
+									'VALUE'	=> "this is the attribute of /MAIN/TAGTWO/attributes/VALUE"
+								)
+							)
+						),
+						'DATA' => array(
+							0 => array(
+								'VALUE'	=> array(
+									0 => array(
+										'DATA'	=> array(
+											0 => array(
+												'VALUE'	=> array(
+													0 => array(
+														'__data__'	=> "data"
+													)
+												)
+											)
+										)
 									)
 								)
 							)
 						)
+					)
 				)
 			);
 			
@@ -103,9 +167,9 @@ class testOfCSPHPXML extends UnitTestCase {
 			if(!$this->assertEqual($expectedArray, $creator->get_data('/'))) {
 				$this->gfObj->debug_print($expectedArray);
 				$this->gfObj->debug_print($creator->get_data('/'));
-				
+				$this->gfObj->debug_print($creator);
 			}
-			$creator->add_tag('TAGTHREE', "Test tag 3 creation", array('VALUE'=>"tag3 value"));
+			$creator->add_tag('/MAIN/TAGTHREE', "Test tag 3 creation", array('VALUE'=>"tag3 value"));
 			$expectedArray['MAIN']['TAGTHREE'] = array(
 				'type'			=> "complete",
 				'attributes'	=> array(
@@ -153,26 +217,16 @@ class testOfCSPHPXML extends UnitTestCase {
 		{
 			///METHODRESPONSE/PARAMS/PARAM/value/STRUCT/MEMBER
 			$creator = new cs_phpxmlCreator('methodresponse');
-			$creator->create_path('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT');
 			$creator->add_tag('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER', 'stuff', array('teSt'=>"1234"));
-			$this->assertTrue($creator->verify_path('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER'));
-			$this->assertTrue($creator->verify_path('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER'));
-			$this->assertTrue($creator->verify_path('/METHODRESPONSE/PARAMS/PARAM/VALUE/struct/MEMBER'));
-			$this->assertTrue($creator->verify_path('/methodResponse/params/param/value/struct/member'));
-			$this->assertTrue($creator->verify_path('/methodResponse/params/param/value/struct'));
-			$this->assertTrue($creator->verify_path('/methodResponse/params/param/value'));
-			$this->assertTrue($creator->verify_path('/methodResponse/params/param/value/struct/member'));
-			$this->assertTrue($creator->verify_path('/methodResponse/params/param/Value/struct/member'));
-			$this->assertTrue($creator->verify_path('/methodResponse/params/param/vALUE/struct/member'));
 			
-			$this->assertEqual('stuff', $creator->get_data('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER/value'));
-			$this->assertNotEqual('stuff', $creator->get_data('/methodResponse/params/param/value/struct/member/value'));
+			$this->assertEqual('stuff', $creator->get_tag_value('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER'));
+			$this->assertNotEqual('stuff', $creator->get_tag_value('/methodResponse/params/param/value/struct/member'));
 			
-			$this->assertEqual('1234', $creator->get_data('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER/attributes/teSt'));
-			$this->assertEqual('', $creator->get_data('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER/attributes/TEST'));
+			$this->assertEqual('1234', $creator->get_tag_value('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER/attributes/teSt'));
+			$this->assertEqual('', $creator->get_tag_value('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER/attributes/TEST'));
 		}
 		
-	}//end test_issue2
+	}//end test_issue267
 	//-------------------------------------------------------------------------
 	
 	
@@ -187,14 +241,15 @@ class testOfCSPHPXML extends UnitTestCase {
 		{
 			$parser = new cs_phpxmlParser(file_get_contents($testFile), true);
 			
-			$this->assertEqual('Tue, 10 Jun 2003 04:00:00 GMT', $parser->get_path('/rss/channel/pubDate/value'));
+			$this->assertEqual('Tue, 10 Jun 2003 04:00:00 GMT', $parser->get_path('/rss/channel/pubDate/'. cs_phpxmlCreator::dataIndex));
+			$this->assertEqual($parser->get_path('/rss/channel/pubDate/'. cs_phpxmlCreator::dataIndex), $parser->get_tag_value('/rss/channel/pubDate'));
 			
-			$this->assertNotEqual($parser->get_path('/rss/channel/item/0/value/value'), $parser->get_path('/rss/channel/item/0/Value/value'));
-			$this->assertEqual('Testing cs_phpxml1', $parser->get_path('/rss/channel/item/0/value/value'));
-			$this->assertEqual('Testing cs_phpxml2', $parser->get_path('/rss/channel/item/0/Value/value'));
+			$this->assertNotEqual($parser->get_path('/rss/channel/item/0/value/'. cs_phpxmlCreator::dataIndex), $parser->get_path('/rss/channel/item/0/Value/'. cs_phpxmlCreator::dataIndex));
+			$this->assertEqual('Testing cs_phpxml1', $parser->get_path('/rss/channel/item/0/value/'. cs_phpxmlCreator::dataIndex));
+			$this->assertEqual('Testing cs_phpxml2', $parser->get_path('/rss/channel/item/0/Value/'. cs_phpxmlCreator::dataIndex));
 			
-			$this->assertEqual('test 2', $parser->get_path('/rss/channel/item/0/Value/attributes/note'));
-			$this->assertEqual('test 1', $parser->get_path('/rss/channel/item/0/value/attributes/note'));
+			$this->assertEqual('test 2', $parser->get_attribute('/rss/channel/item/0/Value', 'note'));
+			$this->assertEqual('test 1', $parser->get_attribute('/rss/channel/item/0/value', 'note'));
 		}
 		
 		// Recreate the entire test XML file and make sure it matches.
@@ -253,9 +308,6 @@ class testOfCSPHPXML extends UnitTestCase {
 				)
 			);
 			
-			$xml->create_path($pathBase .'/item');
-			$xml->set_tag_as_multiple($pathBase .'/item');
-			
 			foreach($itemsData as $i=>$myTagData) {
 				$myPath = $pathBase .'/item/'. $i;
 				$xml->add_tag($myPath);
@@ -266,13 +318,17 @@ class testOfCSPHPXML extends UnitTestCase {
 			
 			$xml->add_attribute($pathBase .'/item/0/value', array('note'=>"test 1"));
 			$xml->add_attribute($pathBase .'/item/0/Value', array('note'=>"test 2"));
-			
-			
-			$this->gfObj->debug_print(htmlentities($xml->create_xml_string()));
 		}
 		
 	}//end test_preserveCase()
 	//-------------------------------------------------------------------------
 }
 
+		class _testXML extends cs_phpxmlAbstract {
+			public $rootElement;
+			public $preserveCase;
+			public function fix_path($path) {
+				return(parent::fix_path($path));
+			}
+		}
 ?>
