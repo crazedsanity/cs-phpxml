@@ -113,7 +113,8 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 	
 	//=================================================================================
 	public function get_tag_value($path) {
-		$data = $this->a2p->get_data($path);
+		$usePath = $this->fix_path($path);
+		$data = $this->a2p->get_data($usePath);
 		if(isset($data[cs_phpxmlCreator::dataIndex])) {
 			$retval = $data[cs_phpxmlCreator::dataIndex];
 		}
@@ -159,106 +160,120 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 		if(!strlen($this->rootElement)) {
 			throw new exception(__METHOD__ .": invalid root element");
 		}
-		$path = preg_replace('/\/$/', '', $path);
-		if(!$this->preserveCase) {
-			$path = strtoupper($path);
+		if($path === '/') {
+			$path = "";
 		}
-		$path = preg_replace('/\/+/', '/', $path);
-		
-		$bits = $this->explode_path($path);
-		
-		//don't append '/0' if they're looking for an attribute or data value.
-		$appendThis = null;
-		{
-			if($bits[(count($bits)-1)] == cs_phpxmlCreator::dataIndex) {
-				$appendThis = array_pop($bits);
+		else {
+			$path = preg_replace('/\/$/', '', $path);
+			if(!$this->preserveCase) {
+				$path = strtoupper($path);
 			}
-			if($bits[(count($bits)-1)] == cs_phpxmlCreator::attributeIndex) {
-				$appendThis = array_pop($bits);
-			}
-		}
-		
-		if(preg_match('/^\//', $path)) {
-			/*  absolute path: first item MUST be root element, followed by 0 -- a higher number 
-			 *	would indicate multiple root elements.
-			 */
-			if(preg_match('/^\/'. $this->rootElement .'\//i', $path) || $path == '/') {
-				array_shift($bits);
-				if(preg_match('/^\/'. $this->rootElement .'\/0\//i', $path)) {
-					array_shift($bits);
+			$path = preg_replace('/\/+/', '/', $path);
+			
+			$bits = $this->explode_path($path);
+			
+			//don't append '/0' if they're looking for an attribute or data value.
+			$appendThis = null;
+			{
+				if($bits[(count($bits)-1)] == cs_phpxmlCreator::dataIndex) {
+					$appendThis = array_pop($bits);
+				}
+				if($bits[(count($bits)-1)] == cs_phpxmlCreator::attributeIndex) {
+					$appendThis = array_pop($bits);
 				}
 			}
-			else {
-				throw new exception(__METHOD__ .": absolute paths must start with rootElement (". $this->rootElement ."), " .
-						"and any numeric indexed directly following it MUST be zero (path: ". $path . ")");
-			}
-		}
-		elseif(preg_match('/^'. $this->rootElement .'/i', $path)) {
-			array_shift($bits);
-			if(preg_match('/^'. $this->rootElement .'\/0/i', $path)) {
-				array_shift($bits);
-			}
-		}
-		
-		/* the key::: each tag should have a number in the path beyond it.  So "/path/to/something" becomes 
-		 *	"/path/0/to/0/something/0", but "/path/to/1/something" must become "/path/0/to/1/something/0" 
-		 *	(instead of "/path/0/to/0/1/0/something/0" by automatically adding a 0 to each bit)
-		 *
-		 * The index handled should ALWAYS be a tag: should the next index be numeric, it will be skipped.
-		 */
-		
-		if(count($bits) == 1 && (is_null($bits[0]) || strlen($bits[0]) == 0)) {
-			$bits = array();
-		}
-		//this array will be transformed into a path again later.
-		$useRoot = $this->rootElement;
-		if(!$this->preserveCase) {
-			$useRoot = strtoupper($this->rootElement);
-		}
-		$newBits = array(
-			0	=> $useRoot,
-			1	=> "0"
-		);
-		$highestBit = (count($bits) -1);
-		for($i=0;$i<count($bits);$i++) {
-			$currentBit = $bits[$i];
-			if(is_numeric($currentBit)) {
-				/*
-				 * This happens when:
-				 * 	-- there are two numerics in a row ("/path/0/0")
+			
+			if(preg_match('/^\//', $path)) {
+				/*  absolute path: first item MUST be root element, followed by 0 -- a higher number 
+				 *	would indicate multiple root elements.
 				 */
-				throw new exception(__METHOD__ .": found numeric (". $currentBit .") where tag should have been");
-			}
-			else {
-				//add this tag ($n) to the array
-				$newBits[] = $currentBit;
-				
-				//make sure we don't go past the end of the array.
-				if($i < $highestBit) { 
-					if(is_numeric($bits[($i+1)])) {
-						//next item is numeric: put it into the path & skip it.
-						$newBits[] = $bits[($i+1)];
-						$i++;
-					}
-					else {
-						$newBits[] = "0";
+				if(preg_match('/^\/'. $this->rootElement .'\//i', $path) || $path == '/') {
+					array_shift($bits);
+					if(preg_match('/^\/'. $this->rootElement .'\/0\//i', $path)) {
+						array_shift($bits);
 					}
 				}
 				else {
-					//the next bit would have been beyond the end of the array, so the index would be 0.
-					$newBits[] = "0";
-					break;
+					throw new exception(__METHOD__ .": absolute paths must start with rootElement (". $this->rootElement ."), " .
+							"and any numeric indexed directly following it MUST be zero (path: ". $path . ")");
 				}
 			}
+			elseif(preg_match('/^'. $this->rootElement .'/i', $path)) {
+				array_shift($bits);
+				if(preg_match('/^'. $this->rootElement .'\/0/i', $path)) {
+					array_shift($bits);
+				}
+			}
+			
+			/* the key::: each tag should have a number in the path beyond it.  So "/path/to/something" becomes 
+			 *	"/path/0/to/0/something/0", but "/path/to/1/something" must become "/path/0/to/1/something/0" 
+			 *	(instead of "/path/0/to/0/1/0/something/0" by automatically adding a 0 to each bit)
+			 *
+			 * The index handled should ALWAYS be a tag: should the next index be numeric, it will be skipped.
+			 */
+			
+			if(count($bits) == 1 && (is_null($bits[0]) || strlen($bits[0]) == 0)) {
+				$bits = array();
+			}
+			//this array will be transformed into a path again later.
+			$useRoot = $this->rootElement;
+			if(!$this->preserveCase) {
+				$useRoot = strtoupper($this->rootElement);
+			}
+			$newBits = array(
+				0	=> $useRoot,
+				1	=> "0"
+			);
+			$highestBit = (count($bits) -1);
+			for($i=0;$i<count($bits);$i++) {
+				$currentBit = $bits[$i];
+				if(is_numeric($currentBit)) {
+					/*
+					 * This happens when:
+					 * 	-- there are two numerics in a row ("/path/0/0")
+					 */
+					throw new exception(__METHOD__ .": found numeric (". $currentBit .") where tag should have been");
+				}
+				else {
+					//add this tag ($n) to the array
+					$newBits[] = $currentBit;
+					
+					//make sure we don't go past the end of the array.
+					if($i < $highestBit) { 
+						if(is_numeric($bits[($i+1)])) {
+							//next item is numeric: put it into the path & skip it.
+							$newBits[] = $bits[($i+1)];
+							$i++;
+						}
+						else {
+							$newBits[] = "0";
+						}
+					}
+					else {
+						//the next bit would have been beyond the end of the array, so the index would be 0.
+						$newBits[] = "0";
+						break;
+					}
+				}
+			}
+			
+			if(!is_null($appendThis)) {
+				$newBits[] = $appendThis;
+			}
+			$path = $this->reconstruct_path($newBits);
 		}
-		
-		if(!is_null($appendThis)) {
-			$newBits[] = $appendThis;
-		}
-		$path = $this->reconstruct_path($newBits);
 		
 		return($path);
 	}//end fix_path()
+	//=================================================================================
+	
+	
+	
+	//=================================================================================
+	public function get_path($path=null) {
+		$path = $this->fix_path($path);
+		return($this->a2p->get_data($path));
+	}//end get_path()
 	//=================================================================================
 }
 ?>

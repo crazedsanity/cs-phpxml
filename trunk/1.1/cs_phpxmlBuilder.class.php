@@ -67,6 +67,7 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	
 	//=================================================================================
 	public function get_xml_string($addXmlVersion=FALSE, $addEncoding=null) {
+		$this->xmlString = "";
 		$xmlDataArray = $this->a2p->get_data($this->rootElement);
 		
 		if(is_array($xmlDataArray) && count($xmlDataArray)) {
@@ -153,6 +154,9 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	 */
 	private function close_tag($tagName, $includeDepthString=TRUE) {
 		$this->depth--;
+		if(!$this->preserveCase) {
+			$tagName = strtolower($tagName);
+		}
 		if($this->depth != 0) {
 			$depthString = "";
 			if($includeDepthString && !$this->noDepthStringForCloseTag) {
@@ -160,9 +164,6 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 				$depthString = $this->create_depth_string();
 			}
 			$this->noDepthStringForCloseTag = NULL;
-			if(!$this->preserveCase) {
-				$tagName = strtolower($tagName);
-			}
 			$this->xmlString .= $depthString . "</". $tagName . ">";
 		}
 		else {

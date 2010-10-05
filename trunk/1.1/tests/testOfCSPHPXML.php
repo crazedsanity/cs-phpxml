@@ -29,7 +29,7 @@ class testOfCSPHPXML extends UnitTestCase {
 		$testXml->preserveCase = true;
 		$fixPathTests = array(
 			'/mAiN/TEST/1/STUFF'	=> '/mAiN/0/TEST/1/STUFF/0',
-			'/'						=> '/mAiN/0',
+			'/'						=> '',
 			'/mAiN/0/TEST'			=> '/mAiN/0/TEST/0',
 			'/mAiN/0/TEST/0/ONE/1'	=> '/mAiN/0/TEST/0/ONE/1'
 		);
@@ -107,11 +107,12 @@ class testOfCSPHPXML extends UnitTestCase {
 	function test_issue267 () {
 		
 		$testFile = dirname(__FILE__) .'/files/test2-issue267.xml';
-		$parser = new cs_phpxmlParser(file_get_contents($testFile));
+		$testFileContents = preg_replace("/\n\$/", '', file_get_contents($testFile));
+		$parser = new cs_phpxmlParser($testFileContents);
 		
 		//first, make sure we can load the file & get the VALUE/value value... 
 		{
-			if(!$this->assertEqual('location of this TAG is /MAIN/TAGONE/VALUE', $parser->get_path('/MAIN/TAGONE/VALUE/value'))) {
+			if(!$this->assertEqual('location of this TAG is /MAIN/TAGONE/VALUE', $parser->get_tag_value('/MAIN/TAGONE/VALUE'))) {
 				$this->gfObj->debug_print($parser->get_path('/MAIN/TAGONE/VALUE/value'));
 			}
 			
@@ -156,7 +157,8 @@ class testOfCSPHPXML extends UnitTestCase {
 			);
 			
 			if(!$this->assertEqual($expectedArray, $parser->get_path('/'))) {
-				$this->gfObj->debug_print($parser->get_path('/'));
+				$this->gfObj->debug_print(serialize($parser->get_path('/')));
+				$this->gfObj->debug_print(serialize($expectedArray));
 			}
 		}
 		
@@ -170,12 +172,11 @@ class testOfCSPHPXML extends UnitTestCase {
 				$this->gfObj->debug_print($creator);
 			}
 			$creator->add_tag('/MAIN/TAGTHREE', "Test tag 3 creation", array('VALUE'=>"tag3 value"));
-			$expectedArray['MAIN']['TAGTHREE'] = array(
-				'type'			=> "complete",
-				'attributes'	=> array(
+			$expectedArray['MAIN'][0]['TAGTHREE'][0] = array(
+				cs_phpxmlCreator::attributeIndex	=> array(
 					'VALUE'		=> "tag3 value"
 				),
-				'value'			=> "Test tag 3 creation"
+				cs_phpxmlCreator::dataIndex			=> "Test tag 3 creation"
 			);
 			
 			if(!$this->assertEqual($expectedArray, $creator->get_data('/'))) {
@@ -188,7 +189,7 @@ class testOfCSPHPXML extends UnitTestCase {
 							"	<tagone>\n" .
 							"		<value>location of this TAG is /MAIN/TAGONE/VALUE</value>\n" .
 							"	</tagone>\n" .
-							"	<tagtwo value=\"this is the attribute of /MAIN/TAGTWO/attributes/VALUE\"/>\n" .
+							"	<tagtwo value=\"this is the attribute of /MAIN/TAGTWO/attributes/VALUE\" />\n" .
 							"	<data>\n" .
 							"		<value>\n" .
 							"			<data>\n" .
@@ -201,16 +202,25 @@ class testOfCSPHPXML extends UnitTestCase {
 			$this->assertEqual($expectedXml, $creator->create_xml_string());
 			
 			//get data on the long path...
-			$this->assertEqual('data', $creator->get_data('/MAIN/DATA/VALUE/DATA/VALUE/value'));
+			$this->assertEqual('data', $creator->get_tag_value('/MAIN/DATA/VALUE/DATA/VALUE'));
 		}
 		
 		//test that we can pass the test XML file through all the classes...
 		{
-			$parser = new cs_phpxmlParser(file_get_contents($testFile));
+			$parser = new cs_phpxmlParser($testFileContents);
 			$creator = new cs_phpxmlCreator($parser->get_root_element());
 			$creator->load_xmlparser_data($parser);
 			$builder = new cs_phpxmlBuilder($creator->get_data());
-			$this->assertEqual(file_get_contents($testFile), $builder->get_xml_string());
+			$expectedXml = $testFileContents;
+			$actualXml = $builder->get_xml_string();
+			if(!$this->assertEqual($expectedXml, $actualXml)) {
+				$this->gfObj->debug_print(serialize(htmlentities($expectedXml)));
+				$this->gfObj->debug_print(serialize(htmlentities($actualXml)));
+			}
+
+			//sub-test: make SURE that calling $builder->get_xml_string() returns the same thing on all subsequent calls.
+			$nextCall = $builder->get_xml_string();
+			$this->assertEqual($actualXml, $nextCall, "Builder is not resetting internal XML string");
 		}
 		
 		//test that we can CREATE xml (from scratch) that has tags named "value".
@@ -222,8 +232,8 @@ class testOfCSPHPXML extends UnitTestCase {
 			$this->assertEqual('stuff', $creator->get_tag_value('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER'));
 			$this->assertNotEqual('stuff', $creator->get_tag_value('/methodResponse/params/param/value/struct/member'));
 			
-			$this->assertEqual('1234', $creator->get_tag_value('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER/attributes/teSt'));
-			$this->assertEqual('', $creator->get_tag_value('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER/attributes/TEST'));
+			$this->assertEqual('1234', $creator->get_path('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER/attributes/teSt'));
+			$this->assertEqual('', $creator->get_path('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER/attributes/TEST'));
 		}
 		
 	}//end test_issue267
