@@ -62,6 +62,7 @@ class testOfCSPHPXML extends UnitTestCase {
 		$xml->add_tag("/cart/item/1/extra/1/extra", null);
 		$xml->add_tag("/cart/extra/magic", "STUFFING!", array("first"=>"the first tag", "second"=>"second tag"));
 		$xml->add_tag("/cart/extra/extra", null);
+		$xml->add_tag("/cart/tag.with.dots.in.it/item", "value of tag with dots");
 		
 		$testFileContents = file_get_contents(dirname(__FILE__) .'/files/basic.xml');
 		$testFileContents = preg_replace("/\n\$/", '', $testFileContents);
@@ -199,7 +200,10 @@ class testOfCSPHPXML extends UnitTestCase {
 							"	</data>\n" .
 							"	<tagthree value=\"tag3 value\">Test tag 3 creation</tagthree>\n" .
 							"</main>";
-			$this->assertEqual($expectedXml, $creator->create_xml_string());
+			if(!$this->assertEqual($expectedXml, $creator->create_xml_string())) {
+				$this->gfObj->debug_print(serialize(htmlentities($expectedXml)));
+				$this->gfObj->debug_print(serialize(htmlentities($creator->create_xml_string())));
+			}
 			
 			//get data on the long path...
 			$this->assertEqual('data', $creator->get_tag_value('/MAIN/DATA/VALUE/DATA/VALUE'));
@@ -226,14 +230,16 @@ class testOfCSPHPXML extends UnitTestCase {
 		//test that we can CREATE xml (from scratch) that has tags named "value".
 		{
 			///METHODRESPONSE/PARAMS/PARAM/value/STRUCT/MEMBER
-			$creator = new cs_phpxmlCreator('methodresponse');
+			$creator = new cs_phpxmlCreator('methodresponse', null, false);
 			$creator->add_tag('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER', 'stuff', array('teSt'=>"1234"));
 			
 			$this->assertEqual('stuff', $creator->get_tag_value('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER'));
-			$this->assertNotEqual('stuff', $creator->get_tag_value('/methodResponse/params/param/value/struct/member'));
+			//this will be equal because the path gets upper-cased.
+			$this->assertEqual('stuff', $creator->get_tag_value('/methodResponse/params/param/value/struct/member'));
 			
-			$this->assertEqual('1234', $creator->get_path('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER/attributes/teSt'));
-			$this->assertEqual('', $creator->get_path('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER/attributes/TEST'));
+			//These have different cases, but should be the same because it is NOT preserving case.
+			$this->assertEqual('1234', $creator->get_attribute('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER', 'teSt'));
+			$this->assertEqual('1234', $creator->get_attribute('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER', 'TEST'));
 		}
 		
 	}//end test_issue267

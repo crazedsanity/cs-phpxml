@@ -17,4 +17,7 @@
 		<magic first="the first tag" second="second tag">STUFFING!</magic>
 		<extra />
 	</extra>
+	<tag.with.dots.in.it>
+		<item>value of tag with dots</item>
+	</tag.with.dots.in.it>
 </cart>

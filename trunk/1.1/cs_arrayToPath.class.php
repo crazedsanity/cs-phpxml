@@ -182,6 +182,9 @@ class cs_arrayToPath extends cs_phpxmlAbstract {
 			
 			//remove a trailing slash, if present, before returning.
 			$retval = preg_replace('/\/$/', '', $retval);
+			
+			//turn multiple slashes into a single.
+			$retval = preg_replace('/\/{2,}/', '/', $retval);
 		}
 		
 		return($retval);
@@ -344,7 +347,7 @@ class cs_arrayToPath extends cs_phpxmlAbstract {
 	 * @return <array>	PASS: array contains exploded path.
 	 */
 	public function explode_path($path) {
-		$path = preg_replace('/\/\//', '/', $path);
+		$path = preg_replace('/\/{2,}/', '/', $path);
 		$path = $this->fix_path($path);
 		$retval = explode('/', $path);
 		

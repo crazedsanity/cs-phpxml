@@ -128,21 +128,35 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 	
 	
 	//=================================================================================
-	public function get_tag_attribute($path, $attributeName=null) {
-		$data = $this->a2p->get_data($path);
-		if(is_array($data) && isset($data[cs_phpxmlCreator::attributeIndex])) {
-			if(is_null($attributeName)) {
+	public function get_attribute($path, $attributeName=NULL) {
+		$retval = NULL;
+		if(!is_null($path)) {
+			$path = preg_replace('/\/$/', '', $path);
+			if(!$this->preserveCase) {
+				$path = strtoupper($path);
+				$attributeName = strtoupper($attributeName);
+			}
+			$data = $this->get_path($path);
+			if(is_array($data[cs_phpxmlCreator::attributeIndex])) {
+				$data = $data[cs_phpxmlCreator::attributeIndex];
 				$retval = $data;
+				if(!is_null($attributeName)) {
+					if(isset($data[$attributeName])) {
+						$retval = $data[$attributeName];
+					}
+					else {
+						throw new exception(__METHOD__ .": no such attribute (". $attributeName .") on path=(". $path .")");
+					}
+				}
 			}
 			else {
-				$retval = $data[$attributeName];
+				throw new exception(__METHOD__ .": no attributes found on path=(". $path .")");
 			}
 		}
-		else {
-			throw new exception(__METHOD__ .": invalid path (". $path .") or no attribute present");
-		}
+		
 		return($retval);
-	}//end get_tag_attribute()
+		
+	}//end get_attribute()
 	//=================================================================================
 	
 	
@@ -261,6 +275,9 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 				$newBits[] = $appendThis;
 			}
 			$path = $this->reconstruct_path($newBits);
+		}
+		if(preg_match('/\/\//', $path)) {
+			throw new exception(__METHOD__ .": path has too many slashes (". $path .")");
 		}
 		
 		return($path);

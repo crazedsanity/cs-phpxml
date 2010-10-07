@@ -101,6 +101,7 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 			$this->data = '';
 			if(preg_match('/^</', $data_source)) {
 				$this->data = $data_source;
+				$this->get_tree();
 			}
 			else {
 				//something went horribly wrong.
@@ -304,69 +305,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		}
 		return($this->rootElement);
 	}//end get_root_element()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	public function get_tag_value($path) {
-		if(!$this->isInitialized) {
-			$this->get_tree();
-		}
-		$retval = NULL;
-		if(!is_null($path)) {
-			$path = preg_replace('/\/$/', '', $path);
-			if(!$this->preserveCase) {
-				$path = strtoupper($path);
-			}
-			$data = $this->get_path($path);
-			if(is_array($data) && isset($data[cs_phpxmlCreator::dataIndex])) {
-				$retval = $data[cs_phpxmlCreator::dataIndex];
-			}
-			else {
-				throw new exception(__METHOD__ .": no data found for path=(". $path .")");
-			}
-		}
-		
-		return ($retval);
-	}//end get_value()
-	//=================================================================================
-	
-	
-	
-	//=================================================================================
-	public function get_attribute($path, $attributeName=NULL) {
-		if(!$this->isInitialized) {
-			$this->get_tree();
-		}
-		$retval = NULL;
-		if(!is_null($path)) {
-			$path = preg_replace('/\/$/', '', $path);
-			if(!$this->preserveCase) {
-				$path = strtoupper($path);
-				$attributeName = strtoupper($attributeName);
-			}
-			$data = $this->get_path($path);
-			if(is_array($data[cs_phpxmlCreator::attributeIndex])) {
-				$data = $data[cs_phpxmlCreator::attributeIndex];
-				$retval = $data;
-				if(!is_null($attributeName)) {
-					if(isset($data[$attributeName])) {
-						$retval = $data[$attributeName];
-					}
-					else {
-						throw new exception(__METHOD__ .": no such attribute (". $attributeName .") on path=(". $path .")");
-					}
-				}
-			}
-			else {
-				throw new exception(__METHOD__ .": no attributes found on path=(". $path .")");
-			}
-		}
-		
-		return($retval);
-		
-	}//end get_attribute()
 	//=================================================================================
 }
 

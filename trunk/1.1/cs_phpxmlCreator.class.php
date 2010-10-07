@@ -161,6 +161,16 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 			$path = $this->fix_path($path);
 		}
 		
+		if(!$this->preserveCase) {
+			$oldArray = $attributes;
+			$attributes = array();
+			foreach($oldArray as $k=>$v) {
+				$attributes[strtoupper($k)] = $v;
+			}
+			if(count($oldArray) != count($attributes)) {
+				throw new exception(__METHOD__ .": cannot set multiple same-name attributes, try setting preserveCase=true");
+			}
+		}
 		if(is_null($attributes) || !count($attributes)) {
 			//nothing there...
 			if(isset($this->attributes[$path])) {
