@@ -224,13 +224,11 @@ $originalArray = $v;
 				
 				if(is_array($v) && count($v)) {
 					$this->open_tag($parentTag, $attribs);
-#$this->gfObj->debug_print(__METHOD__ .": path=(". $path ."), i=(". $i ."), parentTag=(". $parentTag ."), descending into sub-tags on path=(". $updatedPath .")... XMLSTRING::: <br />". htmlentities($this->xmlString));
 					foreach($v as $subIndex=>$subValue) {
 						$updatedPath = $path .'/'. $subIndex;
 						$this->tag_builder($subValue, $subIndex, $updatedPath);
 					}
 					$this->close_tag($parentTag, true);
-#$this->gfObj->debug_print(__METHOD__ .": path=(". $path ."), i=(". $i ."), parentTag=(". $parentTag ."), FINISHED sub-tags, XMLSTRING::: <br />". htmlentities($this->xmlString));
 				}
 				else {
 					//we've reached a dead-end for this path.
@@ -243,7 +241,6 @@ $originalArray = $v;
 						//single tag (i.e. "<tag />").
 						$this->open_tag($parentTag, $attribs, true);
 					}
-#$this->gfObj->debug_print(__METHOD__ .": <b>end of the line</b> for (". $path ."), i=(". $i ."), parentTag=(". $parentTag ."), data=(". $tagData ."), attribs::: ". $this->gfObj->debug_print($attribs,0) .", ORIGINAL ARRAY::: ". $this->gfObj->debug_print($originalArray,0). "<br />XMLSTRING::: <br />". htmlentities($this->xmlString));
 				}
 			}
 			#$this->close_tag($parentTag, true);
@@ -269,9 +266,10 @@ $originalArray = $v;
 		}
 		
 		//append the value, then close the tag.
-		$this->xmlString .= htmlentities($value);
+		$this->xmlString .= htmlentities(stripslashes($value), ENT_NOQUOTES);
 		$this->close_tag($tagName,$addDepthString);
 	}//end add_value_plus_close_tag()
+	//=================================================================================
 
 }
 
