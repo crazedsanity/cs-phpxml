@@ -289,9 +289,12 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	 * 
 	 * @param $path			(string) path in XML document to traverse...
 	 */
-	public function get_path($path=NULL) {
+	public function get_path($path=NULL, $stripTrailingZero=false) {
 		$this->get_tree();
 		$path = $this->fix_path($path);
+		if($stripTrailingZero==true) {
+			$path = preg_replace('/\/0$/', '', $path);
+		}
 		return($this->a2p->get_data($path));
 	}//end get_path()
 	//=================================================================================
