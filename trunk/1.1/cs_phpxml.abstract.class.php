@@ -201,9 +201,9 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 				/*  absolute path: first item MUST be root element, followed by 0 -- a higher number 
 				 *	would indicate multiple root elements.
 				 */
-				if(preg_match('/^\/'. $this->rootElement .'\//i', $path) || $path == '/') {
+				if(preg_match('/^\/'. $this->rootElement .'\/{0,1}/i', $path) || $path == '/') {
 					array_shift($bits);
-					if(preg_match('/^\/'. $this->rootElement .'\/0\//i', $path)) {
+					if(preg_match('/^\/'. $this->rootElement .'\/0\/{0,1}/i', $path)) {
 						array_shift($bits);
 					}
 				}
