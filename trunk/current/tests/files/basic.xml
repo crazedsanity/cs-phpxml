@@ -1,0 +1,23 @@
+<cart foo="bar">
+	<item comment="1">
+		<name>foo</name>
+		<value>lots</value>
+		<extra location="the internet" />
+	</item>
+	<item comment="2">
+		<name>bar</name>
+		<value currency="USD">even more</value>
+		<extra location="unknown" />
+		<extra>
+			<magic first="the first tag" second="second tag">STUFFING!</magic>
+			<extra />
+		</extra>
+	</item>
+	<extra>
+		<magic first="the first tag" second="second tag">STUFFING!</magic>
+		<extra />
+	</extra>
+	<tag.with.dots.in.it>
+		<item>value of tag with dots</item>
+	</tag.with.dots.in.it>
+</cart>
