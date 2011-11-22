@@ -93,7 +93,7 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 				$addThis = ' encoding="'. $addEncoding .'"';
 			}
 			//Add the "<?xml version" stuff.
-			$retval = '<?xml'. $addThis .'?' . ">\n". $retval;
+			$this->xmlString = '<?xml'. $addThis .'?' . ">\n". $this->xmlString;
 		} 
 		
 		return($this->xmlString);
