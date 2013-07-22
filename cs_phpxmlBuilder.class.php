@@ -232,7 +232,7 @@ $originalArray = $v;
 				}
 				else {
 					//we've reached a dead-end for this path.
-					if(!is_null($tagData) && strlen($tagData)) {
+					if(!is_null($tagData) && @strlen($tagData)) {
 						$this->open_tag($parentTag, $attribs, false);
 						$this->add_value_plus_close_tag($tagData, $parentTag, false);
 					}
