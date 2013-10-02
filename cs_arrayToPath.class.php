@@ -50,13 +50,12 @@ class cs_arrayToPath extends cs_phpxmlAbstract {
 	 * TODO::: there is a strange recursion issue when $prefix is non-null: prefix is presently hardwired as NULL for now... 
 	 */
 	public function __construct($array=null) {
-		$this->set_version_file_location(dirname(__FILE__) . '/VERSION');
+		
 		if($array === 'unit_test') {
 			//it's a unit test.
 			$this->isTest = TRUE;
 		}
 		else {
-			$this->get_version();
 			if(is_array($array)) {
 				$this->data = $array;
 			}

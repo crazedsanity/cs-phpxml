@@ -2,18 +2,10 @@
 /*
  * Created on Sept. 11, 2007
  * 
- * 
- * SVN INFORMATION:::
- * -------------------
- * Last Author::::::::: $Author$ 
- * Current Revision:::: $Revision$ 
- * Repository Location: $HeadURL$ 
- * Last Updated:::::::: $Date$
- * 
  */
 
 
-abstract class cs_phpxmlAbstract extends cs_versionAbstract {
+abstract class cs_phpxmlAbstract implements cs_versionInterface {
 	
 	public $isTest = FALSE;
 	protected $a2p;
@@ -21,16 +13,43 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 	protected $preserveCase=false;
 	const dataIndex = '__data__';
 	const attributeIndex = '__attribs__';
+	public static $version;
 	
 	//=========================================================================
 	public function __construct(array $data=null) {
-		$this->set_version_file_location(dirname(__FILE__) . '/VERSION');
 		if(!is_array($data)) {
 			$data = array();
 		}
 		$this->a2p = new cs_arrayToPath($data);
 		$this->gfObj = new cs_globalFunctions;
 	}//end __construct()
+	//=========================================================================
+	
+	
+	
+	//=========================================================================
+	public static function GetVersionObject() {
+		if(!is_object(self::$version)) {
+			self::$version = new cs_version(dirname(__FILE__) .'/VERSION');
+		}
+		return(self::$version);
+	}//end GetVersionObject()
+	//=========================================================================
+	
+	
+	
+	//=========================================================================
+	public function get_version() {
+		return(self::GetVersionObject()->get_version());
+	}//end get_version()
+	//=========================================================================
+	
+	
+	
+	//=========================================================================
+	public function get_project() {
+		return(self::GetVersionObject()->get_project());
+	}//end get_project()
 	//=========================================================================
 	
 	
