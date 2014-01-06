@@ -2,6 +2,7 @@
 	<testsuites>
 		<testsuite name="basics">
 			<file>tests/testOfA2P.php</file>
+			<file>tests/testOfCSPHPXML.php</file>
 		</testsuite>
 	</testsuites>
 </phpunit>
