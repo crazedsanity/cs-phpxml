@@ -1,18 +1,10 @@
 <?php
 /*
  * Created on Jan 25, 2009
- * 
- * FILE INFORMATION:
- * 
- * $HeadURL$
- * $Id$
- * $LastChangedDate$
- * $LastChangedBy$
- * $LastChangedRevision$
  */
 
 
-class testOfA2P extends UnitTestCase {
+class testOfA2P extends PHPUnit_Framework_TestCase {
 	
 	//-------------------------------------------------------------------------
 	function setUp() {
@@ -33,13 +25,13 @@ class testOfA2P extends UnitTestCase {
 	//-------------------------------------------------------------------------
 	function test_basics() {
 		//make sure nothing is in the object initialially.
-		$this->assertEqual(array(), $this->a2p->get_data());
+		$this->assertEquals(array(), $this->a2p->get_data());
 		
 		$newData = array(
 			'look at me'	=> '23dasdvcv3q3qeedasd'
 		);
 		$this->a2p->reload_data($newData);
-		$this->assertNotEqual(array(), $this->a2p->get_data());
+		$this->assertNotEquals(array(), $this->a2p->get_data());
 		
 		
 		//load a complex array & test to ensure the returned value is the same.
@@ -56,8 +48,8 @@ class testOfA2P extends UnitTestCase {
 			'a nother path2 Stuff -+=~!@#$' => '-x-'
 		);
 		$this->a2p->reload_data($newData);
-		$this->assertEqual($newData, $this->a2p->get_data());
-		$this->assertEqual($newData['x']['y']['z']['fiNal'], $this->a2p->get_data('/x/y/z/fiNal'));
+		$this->assertEquals($newData, $this->a2p->get_data());
+		$this->assertEquals($newData['x']['y']['z']['fiNal'], $this->a2p->get_data('/x/y/z/fiNal'));
 		
 		//before going on, test that the list of valid paths makes sense.
 		$expectedValidPaths = array(
@@ -67,26 +59,26 @@ class testOfA2P extends UnitTestCase {
 			'/x/-',
 		);
 		$actualValidPaths = $this->a2p->get_valid_paths();
-		$this->assertEqual(count($expectedValidPaths), count($actualValidPaths));
+		$this->assertEquals(count($expectedValidPaths), count($actualValidPaths));
 		
 		//NOTE: since cs_arrayToPath::get_valid_paths() doesn't return paths in their found order, can't directly compare the arrays.
-		$this->assertTrue(count($expectedValidPaths), count($actualValidPaths)); 
+		$this->assertEquals(count($expectedValidPaths), count($actualValidPaths)); 
 		foreach($expectedValidPaths as $i=>$path) {
 			$findIndex = array_search($path, $actualValidPaths);
 			$this->assertTrue(is_numeric($findIndex));
-			$this->assertTrue(strlen($expectedValidPaths[$findIndex]));
-			$this->assertTrue(strlen($actualValidPaths[$findIndex]));
+			$this->assertTrue(strlen($expectedValidPaths[$findIndex])>0);
+			$this->assertTrue(strlen($actualValidPaths[$findIndex])>0);
 		}
 		
 		
 		$this->a2p->set_data('/x/y/z/fiNal', null);
-		$this->assertNotEqual($this->a2p->get_data('/x/y/z/fiNal'), $newData['x']['y']['z']['fiNal']);
+		$this->assertNotEquals($this->a2p->get_data('/x/y/z/fiNal'), $newData['x']['y']['z']['fiNal']);
 		
 		//ensure paths with dots are ok.
-		$this->assertEqual($this->a2p->get_data('/x/y/z/fiNal'), $this->a2p->get_data('/x/y/z/g/q/x/../../../fiNal'));
+		$this->assertEquals($this->a2p->get_data('/x/y/z/fiNal'), $this->a2p->get_data('/x/y/z/g/q/x/../../../fiNal'));
 		
 		//make sure extra slashes are okay.
-		$this->assertEqual($this->a2p->get_data('/x/y/z/fiNal'), $this->a2p->get_data('/x/y//z///fiNal//'));
+		$this->assertEquals($this->a2p->get_data('/x/y/z/fiNal'), $this->a2p->get_data('/x/y//z///fiNal//'));
 	}//end test_basics()
 	//-------------------------------------------------------------------------
 	
@@ -230,15 +222,14 @@ class testOfA2P extends UnitTestCase {
 			$this->a2p->reload_data($testData['data']);
 			
 			$validPaths = $this->a2p->get_valid_paths();
-			if(!$this->assertEqual(count($testData['paths']), count($validPaths))) {
+			if(!$this->assertEquals(count($testData['paths']), count($validPaths))) {
 				$this->gfObj->debug_print(__METHOD__ .": failed test (". $testName .")... VALID PATHS::: ". $this->gfObj->debug_print($validPaths,0,1) .
 						", EXPECTED PATHS::: ". $this->gfObj->debug_print($testData['paths'],0,1));
-				exit;
 			}
 			
 			foreach($testData['paths'] as $path) {
 				$index = array_search($path, $validPaths);
-				$this->assertTrue(strlen($testData['paths'][$index]));
+				$this->assertTrue(strlen($testData['paths'][$index])>0);
 			}
 		}
 		
