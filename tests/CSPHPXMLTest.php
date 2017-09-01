@@ -10,7 +10,7 @@ class testOfCSPHPXML extends PHPUnit_Framework_TestCase {
 	//-------------------------------------------------------------------------
 	function __construct() {
 		
-		ToolBox::$debugPrintOpt = 1;
+//		ToolBox::$debugPrintOpt = 1;
 		
 	}//end __construct()
 	//-------------------------------------------------------------------------
