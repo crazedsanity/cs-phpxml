@@ -3,13 +3,15 @@
  * Created on Jan 25, 2009
  */
 
+use crazedsanity\core\ToolBox;
 
 class testOfCSPHPXML extends PHPUnit_Framework_TestCase {
 	
 	//-------------------------------------------------------------------------
 	function __construct() {
-		$this->gfObj = new cs_globalFunctions;
-		$this->gfObj->debugPrintOpt=0;
+		
+		ToolBox::$debugPrintOpt = 1;
+		
 	}//end __construct()
 	//-------------------------------------------------------------------------
 
@@ -38,7 +40,7 @@ class testOfCSPHPXML extends PHPUnit_Framework_TestCase {
 			throw new exception("Failed basic fix_path() test... ". $e->getMessage());
 		}
 
-		$xml = new cs_phpxmlCreator('cart', null, true);
+		$xml = new \cs_phpxmlCreator('cart', null, true);
 		$xml->add_attribute("/cart", array("foo"=>"bar"));
 		$xml->add_tag("/cart/item/name", "foo");
 		$xml->add_attribute("/cart/item", array('comment'=>"1"));  //this REPLACES all attributes with the given array.
@@ -61,30 +63,30 @@ class testOfCSPHPXML extends PHPUnit_Framework_TestCase {
 		$generatedXML = $xml->create_xml_string();
 		
 		if(!$this->assertEquals(serialize($testFileContents), serialize($generatedXML))) {
-			$this->gfObj->debug_print(htmlentities(serialize($testFileContents)));
-			$this->gfObj->debug_print(htmlentities(serialize($generatedXML)));
+			ToolBox::debug_print(htmlentities(serialize($testFileContents)));
+			ToolBox::debug_print(htmlentities(serialize($generatedXML)));
 		}
 
-		$parser = new cs_phpxmlParser($generatedXML);
-		#$this->gfObj->debug_print($xml->load_xmlparser_data());
-		$parser->get_tree();
+		$parser = new \cs_phpxmlParser($generatedXML);
+		#ToolBox::debug_print($xml->load_xmlparser_data());
+		$this->assertFalse(is_null($parser->get_tree()));
 	}//end test_basics();
 	
 	
 	
 	//-------------------------------------------------------------------------
-	function texst_pass_data_through_all_classes() {
+	function test_pass_data_through_all_classes() {
 		
 		//first, put it into cs-phpxmlParser.
 		$testFile = dirname(__FILE__) .'/files/test1.xml';
-		$parser = new cs_phpxmlParser(file_get_contents($testFile));
+		$parser = new \cs_phpxmlParser(file_get_contents($testFile));
 		
 		//now move it into the creator.
-		$creator = new cs_phpxmlCreator($parser->get_root_element());
+		$creator = new \cs_phpxmlCreator($parser->get_root_element());
 		$creator->load_xmlparser_data($parser);
 		
 		//now move the data into the xmlBuilder (would be used to make the content of the XML file)
-		$builder = new cs_phpxmlBuilder($creator->get_data());
+		$builder = new \cs_phpxmlBuilder($creator->get_data());
 		
 		//okay, now let's compare it to the original contents.
 		$origMd5 = md5(file_get_contents($testFile));
@@ -101,12 +103,12 @@ class testOfCSPHPXML extends PHPUnit_Framework_TestCase {
 		
 		$testFile = dirname(__FILE__) .'/files/test2-issue267.xml';
 		$testFileContents = preg_replace("/\n\$/", '', file_get_contents($testFile));
-		$parser = new cs_phpxmlParser($testFileContents);
+		$parser = new \cs_phpxmlParser($testFileContents);
 		
 		//first, make sure we can load the file & get the VALUE/value value... 
 		{
 			if(!$this->assertEquals('location of this TAG is /MAIN/TAGONE/VALUE', $parser->get_tag_value('/MAIN/TAGONE/VALUE'))) {
-				$this->gfObj->debug_print($parser->get_path('/MAIN/TAGONE/VALUE/value'));
+				ToolBox::debug_print($parser->get_path('/MAIN/TAGONE/VALUE/value'));
 			}
 			
 			$expectedArray = array(
@@ -150,31 +152,31 @@ class testOfCSPHPXML extends PHPUnit_Framework_TestCase {
 			);
 			
 			if(!$this->assertEquals($expectedArray, $parser->get_path('/'))) {
-				$this->gfObj->debug_print(serialize($parser->get_path('/')));
-				$this->gfObj->debug_print(serialize($expectedArray));
+				ToolBox::debug_print(serialize($parser->get_path('/')));
+				ToolBox::debug_print(serialize($expectedArray));
 			}
 		}
 		
 		//now drop it into creator, and see if we can modify it.
 		{
-			$creator = new cs_phpxmlCreator($parser->get_root_element());
+			$creator = new \cs_phpxmlCreator($parser->get_root_element());
 			$creator->load_xmlparser_data($parser);
 			if(!$this->assertEquals($expectedArray, $creator->get_data('/'))) {
-				$this->gfObj->debug_print($expectedArray);
-				$this->gfObj->debug_print($creator->get_data('/'));
-				$this->gfObj->debug_print($creator);
+				ToolBox::debug_print($expectedArray);
+				ToolBox::debug_print($creator->get_data('/'));
+				ToolBox::debug_print($creator);
 			}
 			$creator->add_tag('/MAIN/TAGTHREE', "Test tag 3 creation", array('VALUE'=>"tag3 value"));
 			$expectedArray['MAIN'][0]['TAGTHREE'][0] = array(
-				cs_phpxmlCreator::attributeIndex	=> array(
+				\cs_phpxmlCreator::attributeIndex	=> array(
 					'VALUE'		=> "tag3 value"
 				),
-				cs_phpxmlCreator::dataIndex			=> "Test tag 3 creation"
+				\cs_phpxmlCreator::dataIndex			=> "Test tag 3 creation"
 			);
 			
 			if(!$this->assertEquals($expectedArray, $creator->get_data('/'))) {
-				$this->gfObj->debug_print($expectedArray);
-				$this->gfObj->debug_print($creator->get_data('/'));
+				ToolBox::debug_print($expectedArray);
+				ToolBox::debug_print($creator->get_data('/'));
 			}
 			
 			//now see if the XML created appears identical.
@@ -193,8 +195,8 @@ class testOfCSPHPXML extends PHPUnit_Framework_TestCase {
 							"	<tagthree value=\"tag3 value\">Test tag 3 creation</tagthree>\n" .
 							"</main>";
 			if(!$this->assertEquals($expectedXml, $creator->create_xml_string())) {
-				$this->gfObj->debug_print(serialize(htmlentities($expectedXml)));
-				$this->gfObj->debug_print(serialize(htmlentities($creator->create_xml_string())));
+				ToolBox::debug_print(serialize(htmlentities($expectedXml)));
+				ToolBox::debug_print(serialize(htmlentities($creator->create_xml_string())));
 			}
 			
 			//get data on the long path...
@@ -203,15 +205,15 @@ class testOfCSPHPXML extends PHPUnit_Framework_TestCase {
 		
 		//test that we can pass the test XML file through all the classes...
 		{
-			$parser = new cs_phpxmlParser($testFileContents);
-			$creator = new cs_phpxmlCreator($parser->get_root_element());
+			$parser = new \cs_phpxmlParser($testFileContents);
+			$creator = new \cs_phpxmlCreator($parser->get_root_element());
 			$creator->load_xmlparser_data($parser);
-			$builder = new cs_phpxmlBuilder($creator->get_data());
+			$builder = new \cs_phpxmlBuilder($creator->get_data());
 			$expectedXml = $testFileContents;
 			$actualXml = $builder->get_xml_string();
 			if(!$this->assertEquals($expectedXml, $actualXml)) {
-				$this->gfObj->debug_print(serialize(htmlentities($expectedXml)));
-				$this->gfObj->debug_print(serialize(htmlentities($actualXml)));
+				ToolBox::debug_print(serialize(htmlentities($expectedXml)));
+				ToolBox::debug_print(serialize(htmlentities($actualXml)));
 			}
 
 			//sub-test: make SURE that calling $builder->get_xml_string() returns the same thing on all subsequent calls.
@@ -222,7 +224,7 @@ class testOfCSPHPXML extends PHPUnit_Framework_TestCase {
 		//test that we can CREATE xml (from scratch) that has tags named "value".
 		{
 			///METHODRESPONSE/PARAMS/PARAM/value/STRUCT/MEMBER
-			$creator = new cs_phpxmlCreator('methodresponse', null, false);
+			$creator = new \cs_phpxmlCreator('methodresponse', null, false);
 			$creator->add_tag('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER', 'stuff', array('teSt'=>"1234"));
 			
 			$this->assertEquals('stuff', $creator->get_tag_value('/METHODRESPONSE/PARAMS/PARAM/VALUE/STRUCT/MEMBER'));
@@ -247,14 +249,14 @@ class testOfCSPHPXML extends PHPUnit_Framework_TestCase {
 		
 		//Test that parsing it preserves case.
 		{
-			$parser = new cs_phpxmlParser(file_get_contents($testFile), true);
+			$parser = new \cs_phpxmlParser(file_get_contents($testFile), true);
 			
-			$this->assertEquals('Tue, 10 Jun 2003 04:00:00 GMT', $parser->get_path('/rss/channel/pubDate/'. cs_phpxmlCreator::dataIndex));
-			$this->assertEquals($parser->get_path('/rss/channel/pubDate/'. cs_phpxmlCreator::dataIndex), $parser->get_tag_value('/rss/channel/pubDate'));
+			$this->assertEquals('Tue, 10 Jun 2003 04:00:00 GMT', $parser->get_path('/rss/channel/pubDate/'. \cs_phpxmlCreator::dataIndex));
+			$this->assertEquals($parser->get_path('/rss/channel/pubDate/'. \cs_phpxmlCreator::dataIndex), $parser->get_tag_value('/rss/channel/pubDate'));
 			
-			$this->assertNotEquals($parser->get_path('/rss/channel/item/0/value/'. cs_phpxmlCreator::dataIndex), $parser->get_path('/rss/channel/item/0/Value/'. cs_phpxmlCreator::dataIndex));
-			$this->assertEquals('Testing cs_phpxml1', $parser->get_path('/rss/channel/item/0/value/'. cs_phpxmlCreator::dataIndex));
-			$this->assertEquals('Testing cs_phpxml2', $parser->get_path('/rss/channel/item/0/Value/'. cs_phpxmlCreator::dataIndex));
+			$this->assertNotEquals($parser->get_path('/rss/channel/item/0/value/'. \cs_phpxmlCreator::dataIndex), $parser->get_path('/rss/channel/item/0/Value/'. \cs_phpxmlCreator::dataIndex));
+			$this->assertEquals('Testing cs_phpxml1', $parser->get_path('/rss/channel/item/0/value/'. \cs_phpxmlCreator::dataIndex));
+			$this->assertEquals('Testing cs_phpxml2', $parser->get_path('/rss/channel/item/0/Value/'. \cs_phpxmlCreator::dataIndex));
 			
 			$this->assertEquals('test 2', $parser->get_attribute('/rss/channel/item/0/Value', 'note'));
 			$this->assertEquals('test 1', $parser->get_attribute('/rss/channel/item/0/value', 'note'));
@@ -262,7 +264,7 @@ class testOfCSPHPXML extends PHPUnit_Framework_TestCase {
 		
 		// Recreate the entire test XML file and make sure it matches.
 		{
-			$xml = new cs_phpxmlCreator('rss', null, true);
+			$xml = new \cs_phpxmlCreator('rss', null, true);
 			
 			$pathBase = '/rss/channel';
 			$xml->add_tag($pathBase);
@@ -332,11 +334,11 @@ class testOfCSPHPXML extends PHPUnit_Framework_TestCase {
 	//-------------------------------------------------------------------------
 }
 
-		class _testXML extends cs_phpxmlAbstract {
-			public $rootElement;
-			public $preserveCase;
-			public function fix_path($path) {
-				return(parent::fix_path($path));
-			}
-		}
-?>
+class _testXML extends \cs_phpxmlAbstract {
+	public $rootElement;
+	public $preserveCase;
+	public function fix_path($path) {
+		return(parent::fix_path($path));
+	}
+}
+

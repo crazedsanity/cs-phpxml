@@ -2,14 +2,6 @@
 /*
  * Created on Nov 14, 2006
  * 
- * SVN INFORMATION:::
- * -------------------
- * Last Author::::::::: $Author$ 
- * Current Revision:::: $Revision$ 
- * Repository Location: $HeadURL$ 
- * Last Updated:::::::: $Date$
- * 
- * 
  * Built to convert an XML document into a multi-dimensional array.
  * 
  * 
@@ -67,8 +59,12 @@
  * 
  */
 
+namespace crazedsanity\xml;
 
-class cs_phpxmlParser extends cs_phpxmlAbstract {
+use crazedsanity\core\ToolBox;
+
+
+class Parser extends xmlAbstract {
 
 	private $data;					// Input XML data buffer
 	private $currentPath = null;
@@ -80,8 +76,8 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 	protected $a2p = null;
 	protected $preserveCase=false;	// If it is set to boolean false, tag and attribute names will be UPPERCASED.
 	
-	const dataIndex		= cs_phpxmlCreator::dataIndex;
-	const attribIndex	= cs_phpxmlCreator::attributeIndex;
+	const dataIndex		= \cs_phpxmlCreator::dataIndex;
+	const attribIndex	= \cs_phpxmlCreator::attributeIndex;
 	
 	//=================================================================================
 	/**
@@ -94,7 +90,6 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 			$this->isTest = TRUE;
 		}
 		else {
-			$this->get_version();
 			if(is_bool($preserveCase)) {
 				$this->preserveCase=$preserveCase;
 			}
@@ -158,7 +153,7 @@ class cs_phpxmlParser extends cs_phpxmlAbstract {
 		}
 		
 		if($sanityCheck == $sanityMustBe) {
-			$this->a2p = new cs_arrayToPath(array());
+			$this->a2p = new \cs_arrayToPath(array());
 			$this->xmlVals = $vals;
 			$this->xmlIndex = $index;
 			$this->closedPaths = array();

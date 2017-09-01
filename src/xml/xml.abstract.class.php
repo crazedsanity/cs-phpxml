@@ -1,19 +1,17 @@
 <?php
 /*
  * Created on Sept. 11, 2007
- * 
- * 
- * SVN INFORMATION:::
- * -------------------
- * Last Author::::::::: $Author$ 
- * Current Revision:::: $Revision$ 
- * Repository Location: $HeadURL$ 
- * Last Updated:::::::: $Date$
- * 
  */
 
 
-abstract class cs_phpxmlAbstract extends cs_versionAbstract {
+namespace crazedsanity\xml;
+
+use crazedsanity\core\ToolBox;
+use \cs_arrayToPath;
+use \cs_phpxmlCreator;
+
+
+abstract class xmlAbstract {
 	
 	public $isTest = FALSE;
 	protected $a2p;
@@ -24,12 +22,11 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 	
 	//=========================================================================
 	public function __construct(array $data=null) {
-		$this->set_version_file_location(dirname(__FILE__) . '/VERSION');
+//		$this->set_version_file_location(dirname(__FILE__) . '/VERSION');
 		if(!is_array($data)) {
 			$data = array();
 		}
-		$this->a2p = new cs_arrayToPath($data);
-		$this->gfObj = new cs_globalFunctions;
+		$this->a2p = new \cs_arrayToPath($data);
 	}//end __construct()
 	//=========================================================================
 	
@@ -115,8 +112,8 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 	public function get_tag_value($path) {
 		$usePath = $this->fix_path($path);
 		$data = $this->a2p->get_data($usePath);
-		if(isset($data[cs_phpxmlCreator::dataIndex])) {
-			$retval = $data[cs_phpxmlCreator::dataIndex];
+		if(isset($data[\cs_phpxmlCreator::dataIndex])) {
+			$retval = $data[\cs_phpxmlCreator::dataIndex];
 		}
 		else {
 			throw new exception(__METHOD__ .": invalid path (". $path .") or no value present");
@@ -137,8 +134,8 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 				$attributeName = strtoupper($attributeName);
 			}
 			$data = $this->get_path($path);
-			if(is_array($data[cs_phpxmlCreator::attributeIndex])) {
-				$data = $data[cs_phpxmlCreator::attributeIndex];
+			if(is_array($data[\cs_phpxmlCreator::attributeIndex])) {
+				$data = $data[\cs_phpxmlCreator::attributeIndex];
 				$retval = $data;
 				if(!is_null($attributeName)) {
 					if(isset($data[$attributeName])) {
@@ -189,10 +186,10 @@ abstract class cs_phpxmlAbstract extends cs_versionAbstract {
 			//don't append '/0' if they're looking for an attribute or data value.
 			$appendThis = null;
 			{
-				if($bits[(count($bits)-1)] == cs_phpxmlCreator::dataIndex) {
+				if($bits[(count($bits)-1)] == \cs_phpxmlCreator::dataIndex) {
 					$appendThis = array_pop($bits);
 				}
-				if($bits[(count($bits)-1)] == cs_phpxmlCreator::attributeIndex) {
+				if($bits[(count($bits)-1)] == \cs_phpxmlCreator::attributeIndex) {
 					$appendThis = array_pop($bits);
 				}
 			}

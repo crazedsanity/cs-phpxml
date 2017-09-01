@@ -3,13 +3,13 @@
  * Created on Jan 25, 2009
  */
 
+use crazedsanity\core\ToolBox;
 
 class testOfA2P extends PHPUnit_Framework_TestCase {
 	
 	//-------------------------------------------------------------------------
 	function setUp() {
 		$this->a2p = new cs_arrayToPath(array());
-		$this->gfObj = new cs_globalFunctions;
 	}//end setUp()
 	//-------------------------------------------------------------------------
 	
@@ -223,8 +223,8 @@ class testOfA2P extends PHPUnit_Framework_TestCase {
 			
 			$validPaths = $this->a2p->get_valid_paths();
 			if(!$this->assertEquals(count($testData['paths']), count($validPaths))) {
-				$this->gfObj->debug_print(__METHOD__ .": failed test (". $testName .")... VALID PATHS::: ". $this->gfObj->debug_print($validPaths,0,1) .
-						", EXPECTED PATHS::: ". $this->gfObj->debug_print($testData['paths'],0,1));
+				ToolBox::debug_print(__METHOD__ .": failed test (". $testName .")... VALID PATHS::: ". ToolBox::debug_print($validPaths,0,1) .
+						", EXPECTED PATHS::: ". ToolBox::debug_print($testData['paths'],0,1));
 			}
 			
 			foreach($testData['paths'] as $path) {

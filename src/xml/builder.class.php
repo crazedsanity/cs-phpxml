@@ -2,17 +2,14 @@
 /*
  * Created on Dec 1, 2006
  * 
- * SVN INFORMATION:::
- * -------------------
- * Last Author::::::::: $Author$ 
- * Current Revision:::: $Revision$ 
- * Repository Location: $HeadURL$ 
- * Last Updated:::::::: $Date$
- * 
  */
 
+namespace crazedsanity\xml;
+
+use crazedsanity\core\ToolBox;
 	
-class cs_phpxmlBuilder extends cs_phpxmlAbstract {
+class Builder extends xmlAbstract {
+	
 	private $goAhead = FALSE;
 	private $xmlArray = NULL;
 	private $xmlString = "";
@@ -26,8 +23,8 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 	protected $preserveCase=false;
 	private $rootAttributes=null;
 
-	private $dataIndex = cs_phpxmlCreator::dataIndex;
-	private $attributeIndex = cs_phpxmlCreator::attributeIndex;
+	private $dataIndex = Creator::dataIndex;
+	private $attributeIndex = Creator::attributeIndex;
 	
 	//=================================================================================
 	/**
@@ -58,7 +55,7 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 			parent::__construct($xmlArray);
 		}
 		else {
-			throw new exception(__METHOD__ .": FATAL: no array passed::: ". $this->gfObj->debug_var_dump($xmlArray));
+			throw new exception(__METHOD__ .": FATAL: no array passed::: ". ToolBox::debug_var_dump($xmlArray));
 		}
 	}//end __construct()
 	//=================================================================================
@@ -199,7 +196,7 @@ class cs_phpxmlBuilder extends cs_phpxmlAbstract {
 		if(is_null($path)) {
 			$path = '/'. $this->rootElement;
 		}
-#$this->gfObj->debug_print(__METHOD__ .": path=(". $path .")". $this->gfObj->debug_print($data,0),1);
+#ToolBox::debug_print(__METHOD__ .": path=(". $path .")". ToolBox::debug_print($data,0),1);
 		
 		if(is_array($data)) {
 			$parentTagOpened = false;
@@ -246,7 +243,7 @@ $originalArray = $v;
 			#$this->close_tag($parentTag, true);
 		}
 		else {
-			//throw new exception(__METHOD__ .": invalid data::: ". $this->gfObj->debug_var_dump($data,0));
+			//throw new exception(__METHOD__ .": invalid data::: ". ToolBox::debug_var_dump($data,0));
 			$this->open_tag($parentTag);
 		}
 		

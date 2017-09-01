@@ -3,14 +3,6 @@
  * Created on Dec 18, 2006
  * 
  * 
- * SVN INFORMATION:::
- * -------------------
- * Last Author::::::::: $Author$ 
- * Current Revision:::: $Revision$ 
- * Repository Location: $HeadURL$ 
- * Last Updated:::::::: $Date$
- * 
- * 
  * Methods to create XML that's parseable by cs_phpxmlBuilder{}.  Eliminates the need for manually creating
  * a massive array, just to feed it into cs_phpxmlBuilder: it's assumed that the XML is being built in-line,
  * though there are methods for "going back" and modifying specific items within a specific tag (tags 
@@ -70,7 +62,11 @@
  */
 
 
-class cs_phpxmlCreator extends cs_phpxmlAbstract {
+namespace crazedsanity\xml;
+
+use crazedsanity\core\ToolBox;
+
+class Creator extends xmlAbstract {
 	protected $rootElement;
 	protected $preserveCase = false;
 	protected $a2p = null;
@@ -203,7 +199,7 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * Creates an XML string based upon the current internal array structure.
 	 */
 	public function create_xml_string($addXmlVersion=FALSE, $addEncoding=FALSE) {
-		$xmlBuilder = new cs_phpxmlBuilder($this->a2p->get_data(), $this->preserveCase);
+		$xmlBuilder = new \cs_phpxmlBuilder($this->a2p->get_data(), $this->preserveCase);
 		$retval = $xmlBuilder->get_xml_string($addXmlVersion, $addEncoding);
 		return($retval);
 		
@@ -217,11 +213,11 @@ class cs_phpxmlCreator extends cs_phpxmlAbstract {
 	 * Takes an XMLParser object & loads data from it as the internal XML array. This 
 	 * facilitates the ability to add data to existing XML.
 	 */
-	public function load_xmlparser_data(cs_phpxmlParser $obj) {
+	public function load_xmlparser_data(\cs_phpxmlParser $obj) {
 		//TODO: need to be able to re-populate $this->tags & $this->attributes
 		$data = $obj->get_tree();
 		$this->xmlArray = $data;
-		$this->a2p = new cs_arrayToPath($data);
+		$this->a2p = new \cs_arrayToPath($data);
 		
 		$x = array_keys($this->a2p->get_data(NULL));
 		
